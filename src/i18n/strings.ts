@@ -1,0 +1,58 @@
+import type { Lang } from '../types'
+
+export const strings: Record<'bm' | 'en', Lang> = {
+  bm: {
+    alertTitle: 'Amaran Banjir Taman Sri Muda',
+    levels: {
+      1: { label: 'BERWASPADA', action: 'Pantau berita. Sediakan beg kecemasan.', color: 'bg-green-600' },
+      2: { label: 'BERHATI-HATI', action: 'Pindahkan barang berharga. Siap untuk berpindah.', color: 'bg-yellow-500' },
+      3: { label: 'AMARAN', action: 'Berpindah sekarang ke pusat pemindahan berdekatan.', color: 'bg-orange-500' },
+      4: { label: 'BAHAYA KRITIKAL', action: 'PINDAH SEGERA. Hubungi 999 jika terperangkap.', color: 'bg-red-600' },
+    },
+    timeRemaining: 'Masa tinggal',
+    timeActionNow: 'Bertindak sekarang',
+    timeEstimatePending: 'Anggaran masa dalam semakan',
+    timeEstimatePendingDetail: 'Data pintu air dan paras sungai sedang disahkan.',
+    reportIncident: 'Laporkan Kejadian',
+    reportStatus: 'Status Laporan Saya',
+    shareAlert: 'Kongsikan Amaran',
+    watchLevel: 'Paras Semasa',
+    prepare: 'Tindakan Yang Perlu',
+    lastUpdated: 'Dikemaskini',
+    currentLevel: 'Paras Semasa',
+    sensorLabels: {
+      riverStage: 'Paras Sungai',
+      rainfallNow: 'Hujan Sekarang',
+      tidalLevel: 'Paras Pintu Air',
+      riseRate: 'Kadar Naik',
+      pending: 'Dalam semakan',
+    },
+  },
+  en: {
+    alertTitle: 'Taman Sri Muda Flood Alert',
+    levels: {
+      1: { label: 'WATCH', action: 'Monitor news. Prepare emergency bag.', color: 'bg-green-600' },
+      2: { label: 'CAUTION', action: 'Move valuables upstairs. Be ready to evacuate.', color: 'bg-yellow-500' },
+      3: { label: 'WARNING', action: 'Evacuate now to nearest relief centre.', color: 'bg-orange-500' },
+      4: { label: 'CRITICAL DANGER', action: 'EVACUATE IMMEDIATELY. Call 999 if trapped.', color: 'bg-red-600' },
+    },
+    timeRemaining: 'Time Remaining',
+    timeActionNow: 'Act now',
+    timeEstimatePending: 'Time estimate under review',
+    timeEstimatePendingDetail: 'Gate and river-level data are still being confirmed.',
+    reportIncident: 'Report Incident',
+    reportStatus: 'My Report Status',
+    shareAlert: 'Share Alert',
+    watchLevel: 'Current Level',
+    prepare: 'Action Required',
+    lastUpdated: 'Updated',
+    currentLevel: 'Current Level',
+    sensorLabels: {
+      riverStage: 'River Stage',
+      rainfallNow: 'Rainfall Now',
+      tidalLevel: 'Gate Level',
+      riseRate: 'Rise Rate',
+      pending: 'Pending',
+    },
+  },
+}

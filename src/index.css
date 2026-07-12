@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, -apple-system, sans-serif; }
+#root { width: 100%; min-height: 100vh; }
+
+.alert-l1 { background: #16a34a; }
+.alert-l2 { background: #ca8a04; }
+.alert-l3 { background: #ea580c; }
+.alert-l4 { background: #dc2626; }
+
+.pulse-ring {
+  animation: pulse-ring 2s ease-out infinite;
+}
+@keyframes pulse-ring {
+  0% { transform: scale(0.8); opacity: 0.8; }
+  70% { transform: scale(1.3); opacity: 0; }
+  100% { transform: scale(1.3); opacity: 0; }
+}
