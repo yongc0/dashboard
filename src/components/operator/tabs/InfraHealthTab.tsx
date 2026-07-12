@@ -33,8 +33,12 @@ function GanttBar({ from, to, status }: { from: Date; to: Date; status: string }
 }
 
 export default function InfraHealthTab() {
+  // Only owned hardware carries battery/LoRa telemetry. N2 is a borrowed DID feed —
+  // showing it at 0% battery would misread as a fault.
+  const onsiteSensors = sensors.filter(s => s.provenance === 'onsite')
+
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6">
       {/* Asset health */}
       <div className="bg-white border border-gray-100 rounded-xl shadow-sm">
         <div className="px-5 py-4 border-b border-gray-50">
@@ -66,12 +70,12 @@ export default function InfraHealthTab() {
         </div>
       </div>
 
-      {/* Power & comms panel */}
-      <div className="grid grid-cols-2 gap-4">
+      {/* Power & comms panel — owned onsite hardware only (N2 is a borrowed DID feed) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm">
           <h4 className="font-semibold text-gray-700 mb-4 flex items-center gap-2"><Zap size={16} className="text-yellow-500" /> Power & Solar</h4>
           <div className="space-y-3">
-            {sensors.map(s => (
+            {onsiteSensors.map(s => (
               <div key={s.id} className="flex items-center gap-3">
                 <Sun size={14} className={s.solarCharging ? 'text-yellow-400' : 'text-gray-300'} />
                 <div className="flex-1">
@@ -102,7 +106,7 @@ export default function InfraHealthTab() {
         <div className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm">
           <h4 className="font-semibold text-gray-700 mb-4 flex items-center gap-2"><Wifi size={16} className="text-blue-500" /> Comms & Connectivity</h4>
           <div className="space-y-3">
-            {sensors.map(s => (
+            {onsiteSensors.map(s => (
               <div key={s.id} className="flex items-center justify-between">
                 <div>
                   <div className="text-xs text-gray-500">{s.type} node</div>
@@ -129,6 +133,10 @@ export default function InfraHealthTab() {
               <span className="text-gray-500">Offline fallback (SMS)</span>
               <span className="font-bold text-yellow-600">Spec pending</span>
             </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-500">N2 (DID InfoBanjir)</span>
+              <span className="font-bold text-gray-400">Borrowed feed — no owned hardware</span>
+            </div>
           </div>
         </div>
       </div>
@@ -138,6 +146,7 @@ export default function InfraHealthTab() {
         <div className="px-5 py-4 border-b border-gray-50">
           <h3 className="font-semibold text-gray-700">Sensor Calibration & Provenance</h3>
         </div>
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-xs text-gray-400 uppercase tracking-wide">
@@ -166,6 +175,7 @@ export default function InfraHealthTab() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   )

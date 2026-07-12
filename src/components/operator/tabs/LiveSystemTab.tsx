@@ -1,9 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { differenceInMinutes, format } from 'date-fns'
 import { Wifi, Battery, AlertCircle, CheckCircle, Sun, Clock, ShieldOff, Gauge } from 'lucide-react'
-import { sensors, CURRENT_ALERT_LEVEL } from '../../../data/mockData'
-import { feedConfigs } from '../../../data/feedConfigs'
-import { fusionState } from '../../../data/mockData'
+import { sensors, CURRENT_ALERT_LEVEL, fusionState, getSensor, RAINFALL_MMHR } from '../../../data/mockData'
+import { feedConfigs, classifyIntensity } from '../../../data/feedConfigs'
 import { n8Reading, n8Logic, breachesStdA } from '../../../data/waterQuality'
 import NodeMap from '../../map/NodeMap'
 import type { SensorNode } from '../../../types'
@@ -60,20 +59,43 @@ function NodeCard({ node }: { node: SensorNode }) {
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 mb-3">
-            <div>
-              <div className="text-gray-400 text-xs">Water Level</div>
-              <div className="text-xl font-black text-gray-900">{node.waterLevel}<span className="text-sm font-normal ml-1">m</span></div>
-              <div className="w-full bg-gray-100 rounded-full h-1.5 mt-1">
-                <div className="h-1.5 rounded-full transition-all" style={{
-                  width: `${(node.waterLevel / node.waterLevelMax) * 100}%`,
-                  background: node.waterLevel / node.waterLevelMax > 0.8 ? '#dc2626' : node.waterLevel / node.waterLevelMax > 0.65 ? '#ea580c' : '#22c55e'
-                }} />
-              </div>
-            </div>
-            <div>
-              <div className="text-gray-400 text-xs">Rise Rate dh/dt</div>
-              <div className="text-xl font-black text-gray-900">+{node.dhdt}<span className="text-sm font-normal ml-1">m/hr</span></div>
-            </div>
+            {node.type === 'pluvial' ? (
+              <>
+                {/* Rain gauge — intensity, not water level */}
+                <div>
+                  <div className="text-gray-400 text-xs">Rain Intensity</div>
+                  <div className="text-xl font-black text-gray-900">{RAINFALL_MMHR}<span className="text-sm font-normal ml-1">mm/hr</span></div>
+                  <div className="w-full bg-gray-100 rounded-full h-1.5 mt-1">
+                    <div className="h-1.5 rounded-full transition-all" style={{
+                      width: `${Math.min(100, (RAINFALL_MMHR / 60) * 100)}%`,
+                      background: classifyIntensity(RAINFALL_MMHR).color,
+                    }} />
+                  </div>
+                </div>
+                <div>
+                  <div className="text-gray-400 text-xs">DID Intensity Class</div>
+                  <div className="text-xl font-black" style={{ color: classifyIntensity(RAINFALL_MMHR).color }}>{classifyIntensity(RAINFALL_MMHR).label}</div>
+                  <div className="text-xs text-gray-400">{classifyIntensity(RAINFALL_MMHR).range}</div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <div className="text-gray-400 text-xs">Water Level</div>
+                  <div className="text-xl font-black text-gray-900">{node.waterLevel}<span className="text-sm font-normal ml-1">m</span></div>
+                  <div className="w-full bg-gray-100 rounded-full h-1.5 mt-1">
+                    <div className="h-1.5 rounded-full transition-all" style={{
+                      width: `${(node.waterLevel / node.waterLevelMax) * 100}%`,
+                      background: node.waterLevel / node.waterLevelMax > 0.8 ? '#dc2626' : node.waterLevel / node.waterLevelMax > 0.65 ? '#ea580c' : '#22c55e'
+                    }} />
+                  </div>
+                </div>
+                <div>
+                  <div className="text-gray-400 text-xs">Rise Rate dh/dt</div>
+                  <div className="text-xl font-black text-gray-900">+{node.dhdt}<span className="text-sm font-normal ml-1">m/hr</span></div>
+                </div>
+              </>
+            )}
           </div>
 
           <div className="flex items-center justify-between text-xs text-gray-500 border-t border-gray-50 pt-2">
@@ -252,15 +274,16 @@ function ReleaseControlPanel() {
   )
 }
 
+// Flow-diagram readings are pulled from the data layer, not typed in here.
 const FLOW_NODES = [
-  { id: 'rain', label: 'N1 Rain', x: 40, y: 30, color: '#06b6d4', value: '34 mm/hr', prov: 'onsite' },
+  { id: 'rain', label: 'N1 Rain', x: 40, y: 30, color: '#06b6d4', value: `${RAINFALL_MMHR} mm/hr`, prov: 'onsite' },
   { id: 'fluvial', label: 'N2 Sg.Klang', x: 40, y: 120, color: '#ca8a04', value: 'ID 3015084 ⏳', prov: 'DID' },
-  { id: 'tidal', label: 'N3 Tidal Gate', x: 40, y: 210, color: '#dc2626', value: '3.10 m ⚠STALE', prov: 'onsite' },
+  { id: 'tidal', label: 'N3 Tidal Gate', x: 40, y: 210, color: '#dc2626', value: `${getSensor('N3')?.waterLevel ?? '—'} m ⚠STALE`, prov: 'onsite' },
   { id: 'n7', label: 'N7 Wet Basin', x: 230, y: 30, color: '#0ea5e9', value: 'AUX ⏳', prov: 'onsite' },
   { id: 'n5', label: 'N5 Govt Pond', x: 230, y: 210, color: '#8b5cf6', value: 'PROPOSED', prov: 'onsite' },
   { id: 'pond', label: 'Retention Pond', x: 380, y: 120, color: '#ea580c', value: '71% full' },
   { id: 'n8', label: 'N8 Rel Gate', x: 540, y: 30, color: '#d97706', value: 'gate ⏳', prov: 'onsite' },
-  { id: 'pump', label: 'N4 Pump 10.2 m³/s', x: 540, y: 120, color: '#16a34a', value: '1.92 m', prov: 'onsite' },
+  { id: 'pump', label: 'N4 Pump 10.2 m³/s', x: 540, y: 120, color: '#16a34a', value: `${getSensor('N4')?.waterLevel ?? '—'} m`, prov: 'onsite' },
   { id: 'drain', label: 'Outfall', x: 690, y: 210, color: '#6b7280', value: 'Z_invert ⏳' },
 ]
 
@@ -277,14 +300,15 @@ const EDGES = [
 ]
 
 export default function LiveSystemTab() {
+  // Re-render every 5s so stale detection ("X min ago") stays current.
+  const [, setTick] = useState(0)
   useEffect(() => {
-    // trigger re-render every 5s to refresh stale detection
-    const id = setInterval(() => {}, 5000)
+    const id = setInterval(() => setTick(t => t + 1), 5000)
     return () => clearInterval(id)
   }, [])
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h3 className="font-semibold text-gray-700">Live Sensor Readings</h3>
         <div className="flex items-center gap-2 text-xs text-gray-400">
@@ -294,7 +318,7 @@ export default function LiveSystemTab() {
       </div>
 
       {/* Node cards */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {sensors.map(s => <NodeCard key={s.id} node={s} />)}
       </div>
 

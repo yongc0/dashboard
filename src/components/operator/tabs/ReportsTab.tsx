@@ -1,4 +1,5 @@
-import { FileText, Download, Leaf, BarChart2, Shield, FileCheck } from 'lucide-react'
+import { useState } from 'react'
+import { FileText, Download, Check, Leaf, BarChart2, Shield, FileCheck } from 'lucide-react'
 
 const REPORTS = [
   {
@@ -52,17 +53,31 @@ const REPORTS = [
 ]
 
 export default function ReportsTab() {
+  // Demo build: exports are stubs — clicking gives visible "queued" feedback instead of a dead click.
+  const [queued, setQueued] = useState<Set<string>>(new Set())
+
+  const queue = (title: string) => {
+    setQueued(prev => new Set(prev).add(title))
+    setTimeout(() => setQueued(prev => {
+      const next = new Set(prev)
+      next.delete(title)
+      return next
+    }), 2500)
+  }
+
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h3 className="font-semibold text-gray-700">Reports & Exports</h3>
-        <button className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-semibold">
+        <button
+          onClick={() => REPORTS.filter(r => r.ready).forEach(r => queue(r.title))}
+          className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-semibold hover:bg-gray-700 transition-colors">
           <Download size={14} />
           Bulk Export All
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {REPORTS.map(r => (
           <div key={r.title} className={`bg-white border rounded-xl p-5 shadow-sm flex gap-4 ${!r.ready ? 'opacity-60' : ''}`}>
             <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center flex-shrink-0">
@@ -78,12 +93,15 @@ export default function ReportsTab() {
             </div>
             <button
               disabled={!r.ready}
-              className={`self-start flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap ${
-                r.ready ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              onClick={() => queue(r.title)}
+              className={`self-start flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+                !r.ready ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : queued.has(r.title) ? 'bg-green-600 text-white'
+                : 'bg-blue-600 text-white hover:bg-blue-700'
               }`}
             >
-              <Download size={12} />
-              {r.ready ? 'Export' : 'Coming soon'}
+              {queued.has(r.title) ? <Check size={12} /> : <Download size={12} />}
+              {!r.ready ? 'Coming soon' : queued.has(r.title) ? 'Queued (demo)' : 'Export'}
             </button>
           </div>
         ))}

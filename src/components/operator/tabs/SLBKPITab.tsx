@@ -8,30 +8,32 @@ import { n6Reading, MSMA_TARGETS, breachesStdA } from '../../../data/waterQualit
 
 export default function SLBKPITab() {
   const latestKPI = kpiTrend[kpiTrend.length - 1]
-  const aboveThreshold = latestKPI.dhdt >= latestKPI.threshold
-  const couponStatus = latestKPI.couponAdj === 0 ? 'On covenant — no adjustment' :
-    latestKPI.couponAdj < 0 ? `Step-down ${Math.abs(latestKPI.couponAdj * 100).toFixed(0)} bps` : `Step-up ${latestKPI.couponAdj * 100}bps`
+  // Covenant semantics: HIGHER ratio = better. ≥ threshold → compliant, coupon on rate.
+  const compliant = latestKPI.dhdt >= latestKPI.threshold
+  const couponStatus = latestKPI.couponAdj === 0
+    ? 'On covenant — no adjustment'
+    : `Step-up +${(latestKPI.couponAdj * 100).toFixed(0)} bps (below-covenant penalty)`
 
   const totalAvoided = avoidedLossEvents.reduce((s, e) => s + e.estimatedDamagesAvoided, 0)
   const totalHouseholds = avoidedLossEvents.reduce((s, e) => s + e.householdsProtected, 0)
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6">
       {/* Headline KPI cards */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {[
           {
             label: 'dh/dt Ratio',
             value: latestKPI.dhdt.toFixed(3),
-            sub: `Threshold: ${latestKPI.threshold}`,
-            icon: <TrendingUp size={18} className={aboveThreshold ? 'text-red-500' : 'text-green-500'} />,
-            accent: aboveThreshold ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50',
-            badge: aboveThreshold ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700',
-            badgeText: aboveThreshold ? 'BREACH' : 'COMPLIANT',
+            sub: `Covenant: ≥ ${latestKPI.threshold}`,
+            icon: <TrendingUp size={18} className={compliant ? 'text-green-500' : 'text-red-500'} />,
+            accent: compliant ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50',
+            badge: compliant ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700',
+            badgeText: compliant ? 'COMPLIANT' : 'BELOW COVENANT',
           },
           {
             label: 'Coupon Status',
-            value: latestKPI.couponAdj === 0 ? 'On rate' : `${latestKPI.couponAdj > 0 ? '+' : ''}${(latestKPI.couponAdj * 100).toFixed(0)} bps`,
+            value: latestKPI.couponAdj === 0 ? 'On rate' : `+${(latestKPI.couponAdj * 100).toFixed(0)} bps`,
             sub: couponStatus,
             icon: <DollarSign size={18} className="text-blue-500" />,
             accent: 'border-blue-200 bg-blue-50',
@@ -79,7 +81,7 @@ export default function SLBKPITab() {
           </div>
         </div>
         <p className="text-xs text-gray-400 mb-4">
-          SLB covenant threshold: ≥ 0.95 normalised ratio = coupon on rate. Below 0.85 = +25 bps step-up. Below 0.75 = +50 bps.
+          SLB covenant: ≥ 0.95 normalised ratio = coupon on rate. Below 0.95 = +25 bps step-up. Below 0.85 = +50 bps step-up.
           This chart is the instrument that prices the bond.
         </p>
         <ResponsiveContainer width="100%" height={220}>
@@ -92,18 +94,18 @@ export default function SLBKPITab() {
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis dataKey="date" tick={{ fontSize: 10 }} interval={4} />
-            <YAxis domain={[0.5, 1.1]} tick={{ fontSize: 10 }} />
+            <YAxis domain={[0.8, 1.0]} tick={{ fontSize: 10 }} />
             <Tooltip contentStyle={{ fontSize: 11 }} formatter={(v) => typeof v === 'number' ? v.toFixed(3) : v} />
             <Legend wrapperStyle={{ fontSize: 11 }} />
             <ReferenceLine y={0.95} stroke="#dc2626" strokeDasharray="5 3" label={{ value: 'Covenant 0.95', position: 'right', style: { fontSize: 10, fill: '#dc2626' } }} />
-            <ReferenceLine y={0.85} stroke="#f97316" strokeDasharray="4 2" label={{ value: 'Step-up 0.85', position: 'right', style: { fontSize: 10, fill: '#f97316' } }} />
+            <ReferenceLine y={0.85} stroke="#f97316" strokeDasharray="4 2" label={{ value: '+50 bps below 0.85', position: 'right', style: { fontSize: 10, fill: '#f97316' } }} />
             <Area type="monotone" dataKey="dhdt" fill="url(#kpiGrad)" stroke="#8b5cf6" strokeWidth={2} name="dh/dt ratio" dot={false} />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
 
       {/* Solar + revenue */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <Sun size={16} className="text-yellow-500" />

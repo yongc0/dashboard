@@ -36,7 +36,7 @@ const DEPLOYMENT_CHECKLIST = [
 
 export default function ScalabilityTab() {
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6">
       {/* Multi-site header */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-6 text-white">
         <div className="flex items-center gap-2 mb-2">
@@ -47,7 +47,7 @@ export default function ScalabilityTab() {
           Every component of this system is parameterised — swap sensor IDs, Z_invert, catchment area, and hyetograph.
           The same stack deploys to any Malaysian flood-prone township. This is not a one-off installation; it's a replicable infrastructure product.
         </p>
-        <div className="flex gap-4 mt-4">
+        <div className="flex flex-wrap gap-4 mt-4">
           {[
             { label: 'Sensor nodes', value: '4 types' },
             { label: 'Deployment time', value: '~8 weeks' },
@@ -146,7 +146,7 @@ export default function ScalabilityTab() {
       {/* Replication checklist */}
       <div className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm">
         <h3 className="font-semibold text-gray-700 mb-4">New Site Deployment Checklist</h3>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {DEPLOYMENT_CHECKLIST.map(item => (
             <div key={item.task} className="flex items-center gap-2 text-sm">
               {item.done

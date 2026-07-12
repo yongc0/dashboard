@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { format } from 'date-fns'
 import {
   LayoutDashboard, Radio, Wrench, CloudRain, BarChart2,
   FileText, Users, Globe, AlertOctagon, LogOut
 } from 'lucide-react'
-import { alertState } from '../../data/mockData'
+import { alertState, getSystemMode } from '../../data/mockData'
 import OverviewTab from './tabs/OverviewTab'
 import LiveSystemTab from './tabs/LiveSystemTab'
 import InfraHealthTab from './tabs/InfraHealthTab'
@@ -34,7 +34,14 @@ interface Props {
 
 export default function OperatorConsole({ onSwitchToPublic }: Props) {
   const [activeTab, setActiveTab] = useState('overview')
+  const [now, setNow] = useState(new Date())
   const level = alertState.level
+  const mode = getSystemMode()
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(id)
+  }, [])
 
   const renderTab = () => {
     switch (activeTab) {
@@ -70,13 +77,16 @@ export default function OperatorConsole({ onSwitchToPublic }: Props) {
           LEVEL {level} — {LEVEL_LABELS[level]}
         </div>
 
-        {/* Degraded mode */}
-        <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700 text-xs font-semibold">
-          ⚠ REDUCED MODE — 3/4 nodes
-        </div>
+        {/* System mode — derived from sensor state */}
+        {mode.reduced && (
+          <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700 text-xs font-semibold"
+            title={`Stale: ${mode.staleIds.join(', ') || 'none'} · Feed pending: ${mode.pendingIds.join(', ') || 'none'}`}>
+            ⚠ REDUCED MODE — {mode.reportingCount}/{mode.totalCount} nodes reporting
+          </div>
+        )}
 
         <div className="ml-auto flex items-center gap-4 text-xs text-gray-400">
-          <span>{format(new Date(), 'HH:mm:ss · dd MMM yyyy')}</span>
+          <span className="hidden sm:inline">{format(now, 'HH:mm:ss · dd MMM yyyy')}</span>
           <button
             onClick={onSwitchToPublic}
             className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors"
@@ -112,8 +122,8 @@ export default function OperatorConsole({ onSwitchToPublic }: Props) {
         </div>
       </div>
 
-      {/* Tab content */}
-      <div className="flex-1 overflow-auto">
+      {/* Tab content — bottom padding clears the fixed demo-switcher pill */}
+      <div className="flex-1 overflow-auto pb-16">
         {renderTab()}
       </div>
     </div>

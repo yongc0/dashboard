@@ -27,8 +27,8 @@ export default function CommunityOpsTab() {
   ]
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="grid grid-cols-3 gap-4">
+    <div className="p-4 md:p-6 space-y-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           { label: 'Reports received', value: reports.length, icon: <Camera size={18} className="text-gray-500" /> },
           { label: 'Verified', value: reports.filter(r => r.status === 'verified').length, icon: <CheckCircle size={18} className="text-green-500" /> },
@@ -44,7 +44,7 @@ export default function CommunityOpsTab() {
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Triage queue */}
         <div className="bg-white border border-gray-100 rounded-xl shadow-sm">
           <div className="px-5 py-4 border-b border-gray-50 flex items-center justify-between">

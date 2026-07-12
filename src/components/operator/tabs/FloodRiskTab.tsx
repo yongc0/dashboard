@@ -119,7 +119,7 @@ function WetBasinPanel() {
         Tidally-connected wet basin (Path 2) — a sealed/lined dry tank was rejected as fighting an unwinnable water table.
         Reframes as a blue-green wetland; courts stay at the north end, lower terraces submerge at peaks.
       </p>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {n7.specs?.map((s, i) => (
           <div key={i} className="p-3 rounded-lg border border-gray-100 bg-gray-50">
             <div className="text-xs text-gray-400">{s.label}</div>
@@ -209,19 +209,10 @@ export default function FloodRiskTab() {
   })
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Borrowed feeds — top-of-tab so provenance is clear before chart */}
-      <BorrowedFeedsPanel />
-
-      {/* Bucket A — pending field data that gates the model */}
-      <BucketAPanel />
-
-      {/* N7 auxiliary detention — tidally-connected wet basin */}
-      <WetBasinPanel />
-
-      {/* Risk header */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className={`col-span-2 border rounded-xl p-4 ${risk.panel}`}>
+    <div className="p-4 md:p-6 space-y-6">
+      {/* Risk header — current state first, supporting provenance panels below */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className={`lg:col-span-2 border rounded-xl p-4 ${risk.panel}`}>
           <div className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">Current Risk Assessment</div>
           <div className={`text-2xl font-black ${risk.title}`}>{risk.label} — Level {CURRENT_ALERT_LEVEL}</div>
           <div className={`text-sm mt-1 ${risk.note}`}>
@@ -296,7 +287,7 @@ export default function FloodRiskTab() {
         </ResponsiveContainer>
 
         {/* Tide window table */}
-        <div className="mt-4 grid grid-cols-3 gap-3">
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
           {tideWindows.map((tw, i) => (
             <div key={i} className="border rounded-xl p-3" style={{ borderColor: RISK_COLORS[tw.risk] + '60', background: RISK_COLORS[tw.risk] + '10' }}>
               <div className="text-xs font-bold uppercase" style={{ color: RISK_COLORS[tw.risk] }}>{tw.risk} Risk Window</div>
@@ -308,7 +299,7 @@ export default function FloodRiskTab() {
       </div>
 
       {/* Time-to-lock / storage remaining */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm">
           <div className="flex items-center gap-2 mb-3">
             <Clock size={16} className="text-orange-500" />
@@ -345,10 +336,19 @@ export default function FloodRiskTab() {
         </div>
       </div>
 
+      {/* Borrowed feeds — provenance behind the chart above */}
+      <BorrowedFeedsPanel />
+
+      {/* N7 auxiliary detention — tidally-connected wet basin */}
+      <WetBasinPanel />
+
+      {/* Bucket A — pending field data that gates the model */}
+      <BucketAPanel />
+
       {/* Risk level guide */}
       <div className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm">
         <h3 className="font-semibold text-gray-700 mb-4">Risk Level Guide</h3>
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
           {RISK_GUIDE.map(r => (
             <div key={r.level} className={`rounded-xl p-3 text-white ${r.color}`}>
               <div className="text-2xl font-black">{r.level}</div>

@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import { format } from 'date-fns'
-import { Share2, MessageSquarePlus, ClipboardList, Wifi, AlertTriangle, Map, Users, X } from 'lucide-react'
+import { Share2, MessageSquarePlus, ClipboardList, Wifi, AlertTriangle, Map, Users, X, Check } from 'lucide-react'
 import { alertState, fusionState, residentReports, sensors } from '../../data/mockData'
 import { strings } from '../../i18n/strings'
 import type { AlertLevel } from '../../types'
@@ -22,8 +22,20 @@ const COORDINATORS = [
   { name: 'NADMA Selangor', role: 'Civil Defense', notified: false, ack: false },
 ]
 
+// Bottom sheet with backdrop-tap close
+function Sheet({ onClose, children, padded = true }: { onClose: () => void; children: ReactNode; padded?: boolean }) {
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-end justify-center z-50" onClick={onClose}>
+      <div className={`w-full max-w-md bg-white rounded-t-3xl shadow-xl ${padded ? 'p-6' : 'p-4'}`} onClick={e => e.stopPropagation()}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
 export default function PublicView() {
-  const [lang, setLang] = useState<'bm' | 'en'>('bm')
+  const [lang, setLang] = useState<'bm' | 'en'>(() =>
+    (typeof localStorage !== 'undefined' && localStorage.getItem('tsm-lang') === 'en') ? 'en' : 'bm')
   const [now, setNow] = useState(new Date())
   const [reportModal, setReportModal] = useState(false)
   const [reportStatusModal, setReportStatusModal] = useState(false)
@@ -31,6 +43,9 @@ export default function PublicView() {
   const [chainModal, setChainModal] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [submittedReportId, setSubmittedReportId] = useState<string | null>(null)
+  const [photoAttached, setPhotoAttached] = useState(false)
+  const [locationAttached, setLocationAttached] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   const t = strings[lang]
   const level = alertState.level
@@ -51,14 +66,62 @@ export default function PublicView() {
     return () => clearInterval(id)
   }, [])
 
+  // Escape closes whichever sheet is open
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      setReportModal(false); setReportStatusModal(false); setMapModal(false); setChainModal(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  const switchLang = (l: 'bm' | 'en') => {
+    setLang(l)
+    try { localStorage.setItem('tsm-lang', l) } catch { /* private mode — non-fatal */ }
+  }
+
+  const shareAlert = async () => {
+    const url = window.location.href
+    try {
+      await navigator.clipboard.writeText(url)
+    } catch {
+      // Older browsers / non-secure contexts
+      const ta = document.createElement('textarea')
+      ta.value = url
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+    }
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2500)
+  }
+
+  const closeReportModal = () => {
+    setReportModal(false)
+    setSubmitted(false)
+    setSubmittedReportId(null)
+    setPhotoAttached(false)
+    setLocationAttached(false)
+  }
+
   return (
     <div className="min-h-screen flex flex-col" style={{ background: color, transition: 'background 0.6s ease' }}>
+      {/* Copied-link toast */}
+      {copied && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-2 bg-gray-900 text-white text-sm font-bold px-4 py-2 rounded-full shadow-xl">
+          <Check size={15} className="text-green-400" />
+          {t.linkCopied}
+        </div>
+      )}
+
       {/* Lang toggle */}
       <div className="flex justify-between items-center px-4 pt-4 pb-2">
         <span className="text-white/70 text-sm font-medium tracking-wide">TSM FLOOD ALERT</span>
         <div className="flex gap-1">
           {(['bm', 'en'] as const).map(l => (
-            <button key={l} onClick={() => setLang(l)}
+            <button key={l} onClick={() => switchLang(l)}
               className={`px-3 py-1 rounded text-sm font-bold transition-all ${lang === l ? 'bg-white text-gray-900' : 'bg-white/20 text-white'}`}>
               {l.toUpperCase()}
             </button>
@@ -134,7 +197,7 @@ export default function PublicView() {
               <ClipboardList size={18} />
               {t.reportStatus}
             </button>
-            <button onClick={() => alert('Pautan disalin! / Link copied!')}
+            <button onClick={shareAlert}
               className="flex-1 flex items-center justify-center gap-2 py-3 bg-white/20 text-white rounded-2xl font-semibold border border-white/30 active:scale-95 transition-transform">
               <Share2 size={18} />
               {t.shareAlert}
@@ -144,21 +207,21 @@ export default function PublicView() {
             <button onClick={() => setMapModal(true)}
               className="flex-1 flex items-center justify-center gap-2 py-3 bg-white/20 text-white rounded-2xl font-semibold border border-white/30 active:scale-95 transition-transform">
               <Map size={18} />
-              {lang === 'bm' ? 'Peta Kawasan' : 'Area Map'}
+              {t.areaMap}
             </button>
             {level >= 3 && (
               <button onClick={() => setChainModal(true)}
                 className="flex-1 flex items-center justify-center gap-2 py-3 bg-white/20 text-white rounded-2xl font-semibold border border-white/30 active:scale-95 transition-transform">
                 <Users size={18} />
-                {lang === 'bm' ? 'Penyelaras' : 'Coordinators'}
+                {t.coordinators}
               </button>
             )}
           </div>
         </div>
       </div>
 
-      {/* Footer — Zone D Residents Association credit */}
-      <div className="px-4 pb-4 space-y-1">
+      {/* Footer — Zone D Residents Association credit. Extra bottom padding clears the demo pill. */}
+      <div className="px-4 pb-20 space-y-1">
         <div className="flex items-center justify-between text-white/50 text-xs">
           <div className="flex items-center gap-1">
             <Wifi size={12} />
@@ -166,137 +229,125 @@ export default function PublicView() {
           </div>
           <span>RIFAR · JPS · NADMA</span>
         </div>
-        <div className="text-center text-white/40 text-xs">
-          {lang === 'bm'
-            ? 'Data komuniti disumbangkan oleh Persatuan Penduduk Zon D, Taman Sri Muda'
-            : 'Community data contributed by Zone D Residents Association, Taman Sri Muda'}
-        </div>
+        <div className="text-center text-white/40 text-xs">{t.communityCredit}</div>
       </div>
 
       {/* ── Modals ── */}
 
       {/* Report incident */}
       {reportModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-end justify-center z-50">
-          <div className="w-full max-w-md bg-white rounded-t-3xl p-6 shadow-xl">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">{lang === 'bm' ? 'Lapor Kejadian' : 'Report Incident'}</h2>
-            {submitted ? (
-              <div className="text-center py-8">
-                <div className="text-4xl mb-3">✅</div>
-                <p className="font-bold text-gray-800">{lang === 'bm' ? 'Laporan diterima!' : 'Report received!'}</p>
-                <p className="text-gray-500 text-sm mt-1">ID: {submittedReportId}</p>
-                <p className="text-gray-400 text-xs mt-1">{lang === 'bm' ? 'Dikongsi dengan Persatuan Penduduk Zon D' : 'Shared with Zone D Residents Association'}</p>
-                <button onClick={() => { setSubmitted(false); setSubmittedReportId(null); setReportModal(false) }}
-                  className="mt-4 px-6 py-2 bg-gray-900 text-white rounded-full font-semibold">
-                  {lang === 'bm' ? 'Tutup' : 'Close'}
+        <Sheet onClose={closeReportModal}>
+          <h2 className="text-xl font-bold text-gray-900 mb-4">{t.reportModalTitle}</h2>
+          {submitted ? (
+            <div className="text-center py-8">
+              <div className="text-4xl mb-3">✅</div>
+              <p className="font-bold text-gray-800">{t.reportReceived}</p>
+              <p className="text-gray-500 text-sm mt-1">ID: {submittedReportId}</p>
+              <p className="text-gray-400 text-xs mt-1">{t.sharedWithZoneD}</p>
+              <button onClick={closeReportModal}
+                className="mt-4 px-6 py-2 bg-gray-900 text-white rounded-full font-semibold">
+                {t.close}
+              </button>
+            </div>
+          ) : (
+            <>
+              <textarea className="w-full border border-gray-200 rounded-xl p-3 text-sm mb-3 h-24 resize-none"
+                placeholder={t.reportPlaceholder} />
+              <div className="flex gap-2 mb-4">
+                <button onClick={() => setPhotoAttached(p => !p)}
+                  className={`flex-1 py-2 rounded-xl text-sm border transition-colors ${photoAttached ? 'border-green-500 bg-green-50 text-green-700 font-semibold' : 'border-gray-200 text-gray-600'}`}>
+                  {photoAttached ? `✓ ${t.attached}` : `📷 ${t.addPhoto}`}
+                </button>
+                <button onClick={() => setLocationAttached(p => !p)}
+                  className={`flex-1 py-2 rounded-xl text-sm border transition-colors ${locationAttached ? 'border-green-500 bg-green-50 text-green-700 font-semibold' : 'border-gray-200 text-gray-600'}`}>
+                  {locationAttached ? `✓ ${t.attached}` : `📍 ${t.addLocation}`}
                 </button>
               </div>
-            ) : (
-              <>
-                <textarea className="w-full border border-gray-200 rounded-xl p-3 text-sm mb-3 h-24 resize-none"
-                  placeholder={lang === 'bm' ? 'Terangkan kejadian...' : 'Describe the incident...'} />
-                <div className="flex gap-2 mb-4">
-                  <button className="flex-1 py-2 border border-gray-200 rounded-xl text-sm text-gray-600">
-                    📷 {lang === 'bm' ? 'Tambah Foto' : 'Add Photo'}
-                  </button>
-                  <button className="flex-1 py-2 border border-gray-200 rounded-xl text-sm text-gray-600">
-                    📍 {lang === 'bm' ? 'Lokasi' : 'Location'}
-                  </button>
-                </div>
-                <div className="flex gap-3">
-                  <button onClick={() => setReportModal(false)} className="flex-1 py-3 border border-gray-200 rounded-xl font-semibold text-gray-700">
-                    {lang === 'bm' ? 'Batal' : 'Cancel'}
-                  </button>
-                  <button onClick={() => { setSubmittedReportId(`R${Date.now().toString().slice(-4)}`); setSubmitted(true) }} className="flex-1 py-3 bg-gray-900 text-white rounded-xl font-bold">
-                    {lang === 'bm' ? 'Hantar' : 'Submit'}
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
+              <div className="flex gap-3">
+                <button onClick={closeReportModal} className="flex-1 py-3 border border-gray-200 rounded-xl font-semibold text-gray-700">
+                  {t.cancel}
+                </button>
+                <button onClick={() => { setSubmittedReportId(`R${Date.now().toString().slice(-4)}`); setSubmitted(true) }} className="flex-1 py-3 bg-gray-900 text-white rounded-xl font-bold">
+                  {t.submit}
+                </button>
+              </div>
+            </>
+          )}
+        </Sheet>
       )}
 
       {/* Report status */}
       {reportStatusModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-end justify-center z-50">
-          <div className="w-full max-w-md bg-white rounded-t-3xl p-6 shadow-xl">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">{lang === 'bm' ? 'Status Laporan' : 'Report Status'}</h2>
-            {residentReports.slice(0, 3).map(r => (
-              <div key={r.id} className="flex items-center gap-3 py-3 border-b border-gray-100 last:border-0">
-                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${r.status === 'escalated' ? 'bg-red-500' : r.status === 'verified' ? 'bg-green-500' : 'bg-yellow-500'}`} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-800 truncate">{r.location}</p>
-                  <p className="text-xs text-gray-500">{r.description}</p>
-                </div>
-                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${r.status === 'escalated' ? 'bg-red-100 text-red-700' : r.status === 'verified' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                  {r.status}
-                </span>
+        <Sheet onClose={() => setReportStatusModal(false)}>
+          <h2 className="text-xl font-bold text-gray-900 mb-4">{t.reportStatusTitle}</h2>
+          {residentReports.slice(0, 3).map(r => (
+            <div key={r.id} className="flex items-center gap-3 py-3 border-b border-gray-100 last:border-0">
+              <div className={`w-2 h-2 rounded-full flex-shrink-0 ${r.status === 'escalated' ? 'bg-red-500' : r.status === 'verified' ? 'bg-green-500' : 'bg-yellow-500'}`} />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-gray-800 truncate">{r.location}</p>
+                <p className="text-xs text-gray-500">{r.description}</p>
               </div>
-            ))}
-            <button onClick={() => setReportStatusModal(false)} className="w-full mt-4 py-3 bg-gray-900 text-white rounded-xl font-bold">
-              {lang === 'bm' ? 'Tutup' : 'Close'}
-            </button>
-          </div>
-        </div>
+              <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${r.status === 'escalated' ? 'bg-red-100 text-red-700' : r.status === 'verified' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                {t.reportStatuses[r.status]}
+              </span>
+            </div>
+          ))}
+          <button onClick={() => setReportStatusModal(false)} className="w-full mt-4 py-3 bg-gray-900 text-white rounded-xl font-bold">
+            {t.close}
+          </button>
+        </Sheet>
       )}
 
       {/* Area map (public-safe — no diagnostics) */}
       {mapModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-end justify-center z-50">
-          <div className="w-full max-w-md bg-white rounded-t-3xl p-4 shadow-xl">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-bold text-gray-900">{lang === 'bm' ? 'Peta Kawasan' : 'Area Map'}</h2>
-              <button onClick={() => setMapModal(false)} className="p-1 rounded-full hover:bg-gray-100"><X size={20} /></button>
-            </div>
-            <PublicMap level={level} lang={lang} />
-            <p className="text-xs text-gray-400 mt-2 text-center">
-              {lang === 'bm' ? 'Peta menunjukkan kawasan yang terjejas. Untuk maklumat sensor penuh, hubungi operator.' : 'Map shows affected area. For full sensor detail, contact operator.'}
-            </p>
-            <button onClick={() => setMapModal(false)} className="w-full mt-3 py-3 bg-gray-900 text-white rounded-xl font-bold">
-              {lang === 'bm' ? 'Tutup' : 'Close'}
-            </button>
+        <Sheet onClose={() => setMapModal(false)} padded={false}>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-bold text-gray-900">{t.areaMap}</h2>
+            <button onClick={() => setMapModal(false)} className="p-1 rounded-full hover:bg-gray-100"><X size={20} /></button>
           </div>
-        </div>
+          <PublicMap level={level} lang={lang} />
+          <p className="text-xs text-gray-400 mt-2 text-center">{t.mapCaption}</p>
+          <button onClick={() => setMapModal(false)} className="w-full mt-3 py-3 bg-gray-900 text-white rounded-xl font-bold">
+            {t.close}
+          </button>
+        </Sheet>
       )}
 
       {/* Human-chain coordination (Level 3+) */}
       {chainModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-end justify-center z-50">
-          <div className="w-full max-w-md bg-white rounded-t-3xl p-6 shadow-xl">
-            <div className="flex items-center justify-between mb-1">
-              <h2 className="text-lg font-bold text-gray-900">{lang === 'bm' ? 'Rantaian Penyelaras' : 'Coordinator Chain'}</h2>
-              <button onClick={() => setChainModal(false)} className="p-1 rounded-full hover:bg-gray-100"><X size={20} /></button>
-            </div>
-            <p className="text-xs text-gray-400 mb-4">{lang === 'bm' ? 'SMS + WhatsApp dihantar secara automatik apabila Tahap 3 dicapai.' : 'SMS + WhatsApp sent automatically when Level 3 triggered.'}</p>
-            <div className="divide-y divide-gray-100">
-              {COORDINATORS.map(c => (
-                <div key={c.name} className="flex items-center gap-3 py-3">
-                  <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-sm font-bold text-gray-600 flex-shrink-0">
-                    {c.name[0]}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold text-gray-800">{c.name}</div>
-                    <div className="text-xs text-gray-400">{c.role}</div>
-                  </div>
-                  <div className="flex flex-col items-end gap-0.5">
-                    {c.notified
-                      ? <span className="text-xs font-bold text-blue-600">✓ {lang === 'bm' ? 'Dimaklum' : 'Notified'}</span>
-                      : <span className="text-xs text-gray-300">{lang === 'bm' ? 'Belum dimaklum' : 'Not notified'}</span>}
-                    {c.ack
-                      ? <span className="text-xs font-bold text-green-600">✓ {lang === 'bm' ? 'Akui terima' : 'Acknowledged'}</span>
-                      : c.notified
-                        ? <span className="text-xs text-yellow-500">{lang === 'bm' ? 'Menunggu...' : 'Waiting...'}</span>
-                        : null}
-                  </div>
-                </div>
-              ))}
-            </div>
-            <button onClick={() => setChainModal(false)} className="w-full mt-4 py-3 bg-gray-900 text-white rounded-xl font-bold">
-              {lang === 'bm' ? 'Tutup' : 'Close'}
-            </button>
+        <Sheet onClose={() => setChainModal(false)}>
+          <div className="flex items-center justify-between mb-1">
+            <h2 className="text-lg font-bold text-gray-900">{t.coordinatorChain}</h2>
+            <button onClick={() => setChainModal(false)} className="p-1 rounded-full hover:bg-gray-100"><X size={20} /></button>
           </div>
-        </div>
+          <p className="text-xs text-gray-400 mb-4">{t.coordinatorAutoNote}</p>
+          <div className="divide-y divide-gray-100">
+            {COORDINATORS.map(c => (
+              <div key={c.name} className="flex items-center gap-3 py-3">
+                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-sm font-bold text-gray-600 flex-shrink-0">
+                  {c.name[0]}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold text-gray-800">{c.name}</div>
+                  <div className="text-xs text-gray-400">{c.role}</div>
+                </div>
+                <div className="flex flex-col items-end gap-0.5">
+                  {c.notified
+                    ? <span className="text-xs font-bold text-blue-600">✓ {t.notified}</span>
+                    : <span className="text-xs text-gray-300">{t.notNotified}</span>}
+                  {c.ack
+                    ? <span className="text-xs font-bold text-green-600">✓ {t.acknowledged}</span>
+                    : c.notified
+                      ? <span className="text-xs text-yellow-500">{t.waiting}</span>
+                      : null}
+                </div>
+              </div>
+            ))}
+          </div>
+          <button onClick={() => setChainModal(false)} className="w-full mt-4 py-3 bg-gray-900 text-white rounded-xl font-bold">
+            {t.close}
+          </button>
+        </Sheet>
       )}
     </div>
   )

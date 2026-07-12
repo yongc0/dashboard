@@ -10,6 +10,9 @@ import { computeAlertLevel } from './alertFusion'
 // N2 = borrowed DID feed — PENDING station config (no reading here).
 // N5 = proposed (not installed). N6 = water quality (see below).
 
+// Current N1 rainfall reading (mm/hr) — single source for every component that shows it.
+export const RAINFALL_MMHR = 34
+
 export const sensors: SensorNode[] = [
   {
     id: 'N1',
@@ -77,13 +80,35 @@ export const sensors: SensorNode[] = [
 // Water-quality nodes N6 (discharge compliance, reporting-only) and N8 (pond-gate
 // release-control) now live in ./waterQuality.ts as two distinct nodes.
 
+// Node lookups by ID — never by array index (ordering is not a contract).
+export const getSensor = (nodeId: string) => sensors.find(s => s.nodeId === nodeId)
+const n3 = getSensor('N3')!
+
 // ─── Alert state (computed from fusion) ──────────────────────────────────────
 const fusionResult = computeAlertLevel({
-  dhdt: sensors[1].dhdt,       // N3 rate of rise
-  rainfall: 34,                 // N1 rainfall mm/hr (onsite)
-  tidalLevel: sensors[1].waterLevel,  // N3 tidal reading
+  dhdt: n3.dhdt,                // N3 rate of rise
+  rainfall: RAINFALL_MMHR,      // N1 rainfall mm/hr (onsite)
+  tidalLevel: n3.waterLevel,    // N3 tidal reading
   didRiverLevel: null,          // DID feed not configured
 })
+
+// ─── Derived system mode ──────────────────────────────────────────────────────
+// Honest headline for the console: how many of the 4 signal nodes are reporting,
+// which are stale, which feeds are pending. Derived from sensors — never hardcoded.
+export function getSystemMode() {
+  const reporting = sensors.filter(s => s.lastContact !== null)
+  const stale = sensors.filter(s =>
+    s.lastContact !== null && (Date.now() - s.lastContact.getTime()) / 60000 > 5)
+  const pending = sensors.filter(s => s.confidence === 'pending')
+  const reduced = stale.length > 0 || pending.length > 0
+  return {
+    reduced,
+    reportingCount: reporting.length,
+    totalCount: sensors.length,
+    staleIds: stale.map(s => s.nodeId ?? s.id),
+    pendingIds: pending.map(s => s.nodeId ?? s.id),
+  }
+}
 
 export const CURRENT_ALERT_LEVEL = fusionResult.level
 export const fusionState = fusionResult
@@ -127,13 +152,17 @@ export const tideWindows: TideWindow[] = [
   { start: format(addHours(new Date(), 26.5), 'HH:mm'), end: format(addHours(new Date(), 29.5), 'HH:mm'), risk: 'low' },
 ]
 
+// SLB covenant semantics: HIGHER ratio = better performance.
+// ≥ 0.95 → coupon on rate (adj 0) · 0.85–0.95 → +25 bps step-up · < 0.85 → +50 bps.
 export const kpiTrend: KPIPoint[] = Array.from({ length: 90 }, (_, i) => {
   const d = subDays(new Date(), 89 - i)
-  const base = 0.72 + Math.sin(i / 20) * 0.12 + (i > 70 ? (i - 70) * 0.003 : 0)
-  const coupon = base < 0.85 ? 0 : base < 0.95 ? -0.25 : -0.5
+  // Mid-series dip (day ~35–55) demonstrates the step-up mechanism; otherwise on covenant.
+  const dip = i > 35 && i < 55 ? 0.09 * Math.sin(((i - 35) / 20) * Math.PI) : 0
+  const ratio = +(0.965 + Math.sin(i / 9) * 0.012 - dip).toFixed(3)
+  const coupon = ratio >= 0.95 ? 0 : ratio >= 0.85 ? 0.25 : 0.5
   return {
     date: format(d, 'MMM d'),
-    dhdt: +base.toFixed(3),
+    dhdt: ratio,
     threshold: 0.95,
     couponAdj: coupon,
   }

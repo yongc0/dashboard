@@ -151,4 +151,28 @@ export interface Lang {
     riseRate: string
     pending: string
   }
+  // Modals, buttons, and footer — every Public View string lives here (BM primary)
+  areaMap: string
+  mapCaption: string
+  coordinators: string
+  coordinatorChain: string
+  coordinatorAutoNote: string
+  reportModalTitle: string
+  reportPlaceholder: string
+  addPhoto: string
+  addLocation: string
+  attached: string
+  cancel: string
+  submit: string
+  close: string
+  reportReceived: string
+  sharedWithZoneD: string
+  reportStatusTitle: string
+  linkCopied: string
+  communityCredit: string
+  notified: string
+  notNotified: string
+  acknowledged: string
+  waiting: string
+  reportStatuses: { received: string; verified: string; escalated: string }
 }
