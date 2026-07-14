@@ -124,8 +124,8 @@ export default function PublicView() {
       {/* Header — logo + always-visible 4-language selector */}
       <div className="px-4 pt-4 pb-2 w-full max-w-md mx-auto">
         <div className="flex items-center justify-between mb-2.5">
-          <div className="bg-[#111b57] rounded-lg px-2 py-1 shadow-md">
-            <img src="/logo.png" alt="Resilience 360" className="h-9 w-auto object-contain" />
+          <div className="rounded-lg overflow-hidden shadow-md">
+            <img src="/logo.png" alt="Resilience 360" className="h-11 w-auto object-contain" />
           </div>
           <span className="text-white/60 text-xs font-semibold tracking-widest uppercase">Flood Alert</span>
         </div>
