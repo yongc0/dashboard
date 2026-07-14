@@ -130,9 +130,16 @@ export interface AssetHealth {
   nextMaintenance: Date
 }
 
+// Public View languages: Bahasa Melayu (primary), English, Chinese, Tamil —
+// the four working languages of the TSM community.
+export type LangCode = 'bm' | 'en' | 'zh' | 'ta'
+
 export interface Lang {
+  nativeName: string   // language's own name, shown in the selector
   alertTitle: string
   levels: Record<AlertLevel, { label: string; action: string; color: string }>
+  callEmergency: string   // tap-to-call 999 button (shown at Level 3+)
+  areaLevelPrefix: string // map footer: "This area: Level"
   timeRemaining: string
   timeActionNow: string
   timeEstimatePending: string

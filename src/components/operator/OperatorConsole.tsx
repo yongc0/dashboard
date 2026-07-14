@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { format } from 'date-fns'
 import {
   LayoutDashboard, Radio, Wrench, CloudRain, BarChart2,
-  FileText, Users, Globe, AlertOctagon, LogOut
+  FileText, Users, AlertOctagon, LogOut
 } from 'lucide-react'
 import { alertState, getSystemMode } from '../../data/mockData'
 import OverviewTab from './tabs/OverviewTab'
@@ -12,7 +12,6 @@ import FloodRiskTab from './tabs/FloodRiskTab'
 import SLBKPITab from './tabs/SLBKPITab'
 import ReportsTab from './tabs/ReportsTab'
 import CommunityOpsTab from './tabs/CommunityOpsTab'
-import ScalabilityTab from './tabs/ScalabilityTab'
 
 const TABS = [
   { id: 'overview', label: 'Overview', icon: <LayoutDashboard size={16} />, badge: null },
@@ -22,7 +21,6 @@ const TABS = [
   { id: 'slbkpi', label: 'SLB KPI / Finance', icon: <BarChart2 size={16} />, badge: 'KEY' },
   { id: 'reports', label: 'Reports', icon: <FileText size={16} />, badge: null },
   { id: 'community', label: 'Community Ops', icon: <Users size={16} />, badge: null },
-  { id: 'scale', label: 'Scalability', icon: <Globe size={16} />, badge: null },
 ]
 
 const LEVEL_COLORS = ['', 'bg-green-600', 'bg-yellow-500', 'bg-orange-500', 'bg-red-600']
@@ -52,7 +50,6 @@ export default function OperatorConsole({ onSwitchToPublic }: Props) {
       case 'slbkpi': return <SLBKPITab />
       case 'reports': return <ReportsTab />
       case 'community': return <CommunityOpsTab />
-      case 'scale': return <ScalabilityTab />
       default: return <OverviewTab />
     }
   }
@@ -61,10 +58,8 @@ export default function OperatorConsole({ onSwitchToPublic }: Props) {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Top bar */}
       <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-4 sticky top-0 z-40 shadow-sm">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
-            <span className="text-white text-xs font-black">TSM</span>
-          </div>
+        <div className="flex items-center gap-3">
+          <img src="/logo.png" alt="Resilience 360" className="h-9 w-auto rounded-md" />
           <div>
             <div className="text-sm font-bold text-gray-800">Flood Monitoring Dashboard</div>
             <div className="text-xs text-gray-400">Taman Sri Muda · Operator Console</div>

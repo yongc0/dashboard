@@ -9,26 +9,20 @@ const LEVEL_COLOR: Record<AlertLevel, string> = {
   4: '#dc2626',
 }
 
-const LEVEL_LABEL: Record<AlertLevel, { bm: string; en: string }> = {
-  1: { bm: 'BERWASPADA', en: 'WATCH' },
-  2: { bm: 'BERHATI-HATI', en: 'CAUTION' },
-  3: { bm: 'AMARAN', en: 'WARNING' },
-  4: { bm: 'BAHAYA KRITIKAL', en: 'CRITICAL' },
-}
-
 const TSM_CENTER: [number, number] = [3.030, 101.527]
 const TSM_RADIUS_M = 600  // approximate affected area radius in metres
 
 interface Props {
   level: AlertLevel
-  lang: 'bm' | 'en'
+  levelLabel: string   // already localised by the caller
+  areaPrefix: string   // e.g. "This area: Level"
 }
 
 // Public-facing map: shows only the area alert level.
 // No node diagnostics, no sensor readings, no operator detail.
-export default function PublicMap({ level, lang }: Props) {
+// Language-agnostic — the caller passes pre-localised strings.
+export default function PublicMap({ level, levelLabel, areaPrefix }: Props) {
   const color = LEVEL_COLOR[level]
-  const label = LEVEL_LABEL[level]
 
   return (
     <div style={{ borderRadius: 16, overflow: 'hidden', border: `2px solid ${color}30` }}>
@@ -52,9 +46,7 @@ export default function PublicMap({ level, lang }: Props) {
         >
           <Popup>
             <div style={{ textAlign: 'center', fontFamily: 'system-ui, sans-serif' }}>
-              <div style={{ fontWeight: 900, fontSize: 15, color }}>
-                {lang === 'bm' ? label.bm : label.en}
-              </div>
+              <div style={{ fontWeight: 900, fontSize: 15, color }}>{levelLabel}</div>
               <div style={{ fontSize: 11, color: '#374151', marginTop: 2 }}>
                 Taman Sri Muda · Level {level}
               </div>
@@ -63,9 +55,7 @@ export default function PublicMap({ level, lang }: Props) {
         </Circle>
       </MapContainer>
       <div style={{ background: color, color: 'white', textAlign: 'center', padding: '6px 0', fontSize: 12, fontWeight: 700 }}>
-        {lang === 'bm'
-          ? `Kawasan ini: Tahap ${level} — ${label.bm}`
-          : `This area: Level ${level} — ${label.en}`}
+        {areaPrefix} {level} — {levelLabel}
       </div>
     </div>
   )

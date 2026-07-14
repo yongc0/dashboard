@@ -1,9 +1,9 @@
 import { useState, useEffect, type ReactNode } from 'react'
 import { format } from 'date-fns'
-import { Share2, MessageSquarePlus, ClipboardList, Wifi, AlertTriangle, Map, Users, X, Check } from 'lucide-react'
+import { Share2, MessageSquarePlus, ClipboardList, Wifi, AlertTriangle, Map, Users, X, Check, Phone } from 'lucide-react'
 import { alertState, fusionState, residentReports, sensors } from '../../data/mockData'
-import { strings } from '../../i18n/strings'
-import type { AlertLevel } from '../../types'
+import { strings, LANG_ORDER } from '../../i18n/strings'
+import type { AlertLevel, LangCode } from '../../types'
 import PublicMap from '../map/PublicMap'
 
 const LEVEL_COLORS: Record<AlertLevel, string> = {
@@ -34,8 +34,13 @@ function Sheet({ onClose, children, padded = true }: { onClose: () => void; chil
 }
 
 export default function PublicView() {
-  const [lang, setLang] = useState<'bm' | 'en'>(() =>
-    (typeof localStorage !== 'undefined' && localStorage.getItem('tsm-lang') === 'en') ? 'en' : 'bm')
+  const [lang, setLang] = useState<LangCode>(() => {
+    try {
+      const saved = localStorage.getItem('tsm-lang')
+      if (saved && (LANG_ORDER as string[]).includes(saved)) return saved as LangCode
+    } catch { /* private mode — fall through */ }
+    return 'bm'
+  })
   const [now, setNow] = useState(new Date())
   const [reportModal, setReportModal] = useState(false)
   const [reportStatusModal, setReportStatusModal] = useState(false)
@@ -76,7 +81,7 @@ export default function PublicView() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  const switchLang = (l: 'bm' | 'en') => {
+  const switchLang = (l: LangCode) => {
     setLang(l)
     try { localStorage.setItem('tsm-lang', l) } catch { /* private mode — non-fatal */ }
   }
@@ -116,14 +121,18 @@ export default function PublicView() {
         </div>
       )}
 
-      {/* Lang toggle */}
-      <div className="flex justify-between items-center px-4 pt-4 pb-2">
-        <span className="text-white/70 text-sm font-medium tracking-wide">TSM FLOOD ALERT</span>
-        <div className="flex gap-1">
-          {(['bm', 'en'] as const).map(l => (
-            <button key={l} onClick={() => switchLang(l)}
-              className={`px-3 py-1 rounded text-sm font-bold transition-all ${lang === l ? 'bg-white text-gray-900' : 'bg-white/20 text-white'}`}>
-              {l.toUpperCase()}
+      {/* Header — logo + always-visible 4-language selector */}
+      <div className="px-4 pt-4 pb-2 w-full max-w-md mx-auto">
+        <div className="flex items-center justify-between mb-2.5">
+          <img src="/logo.png" alt="Resilience 360" className="h-9 w-auto rounded-md shadow-md" />
+          <span className="text-white/60 text-xs font-semibold tracking-widest uppercase">Flood Alert</span>
+        </div>
+        <div className="grid grid-cols-4 gap-1.5">
+          {LANG_ORDER.map(code => (
+            <button key={code} onClick={() => switchLang(code)}
+              aria-pressed={lang === code}
+              className={`py-1.5 rounded-lg text-sm font-bold transition-all ${lang === code ? 'bg-white text-gray-900 shadow' : 'bg-white/20 text-white hover:bg-white/30'}`}>
+              {strings[code].nativeName}
             </button>
           ))}
         </div>
@@ -186,6 +195,14 @@ export default function PublicView() {
 
         {/* CTA buttons */}
         <div className="w-full max-w-md flex flex-col gap-3">
+          {/* Tap-to-call emergency — surfaced only when action is urgent (Level 3+) */}
+          {level >= 3 && (
+            <a href="tel:999"
+              className="flex items-center justify-center gap-2 w-full py-4 bg-red-700 text-white rounded-2xl font-black text-lg shadow-lg active:scale-95 transition-transform ring-2 ring-white/50">
+              <Phone size={20} />
+              {t.callEmergency}
+            </a>
+          )}
           <button onClick={() => setReportModal(true)}
             className="flex items-center justify-center gap-2 w-full py-4 bg-white text-gray-900 rounded-2xl font-bold text-lg shadow-lg active:scale-95 transition-transform">
             <MessageSquarePlus size={20} />
@@ -305,7 +322,7 @@ export default function PublicView() {
             <h2 className="text-lg font-bold text-gray-900">{t.areaMap}</h2>
             <button onClick={() => setMapModal(false)} className="p-1 rounded-full hover:bg-gray-100"><X size={20} /></button>
           </div>
-          <PublicMap level={level} lang={lang} />
+          <PublicMap level={level} levelLabel={levelInfo.label} areaPrefix={t.areaLevelPrefix} />
           <p className="text-xs text-gray-400 mt-2 text-center">{t.mapCaption}</p>
           <button onClick={() => setMapModal(false)} className="w-full mt-3 py-3 bg-gray-900 text-white rounded-xl font-bold">
             {t.close}
