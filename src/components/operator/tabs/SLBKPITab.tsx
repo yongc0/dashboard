@@ -4,7 +4,7 @@ import {
 } from 'recharts'
 import { TrendingUp, Sun, Shield, DollarSign, FileText, Lock, Droplets } from 'lucide-react'
 import { kpiTrend, avoidedLossEvents, solarStats } from '../../../data/mockData'
-import { n6Reading, MSMA_TARGETS, breachesStdA } from '../../../data/waterQuality'
+import { bod5Samples, n6Decision, n8Reading, MSMA_TARGETS, breachesStdA } from '../../../data/waterQuality'
 
 export default function SLBKPITab() {
   const latestKPI = kpiTrend[kpiTrend.length - 1]
@@ -156,48 +156,21 @@ export default function SLBKPITab() {
         </div>
       </div>
 
-      {/* N6 Discharge Compliance — Environmental KPI (reporting only) */}
-      <div className="bg-white border border-teal-100 rounded-xl p-5 shadow-sm">
-        <div className="flex items-center gap-2 mb-1">
-          <Droplets size={16} className="text-teal-500" />
-          <h4 className="font-semibold text-gray-700">N6 Outfall Discharge Compliance — Environmental KPI (Green Bond)</h4>
-          <span className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-700">REPORTING ONLY</span>
+      {/* Revision 7 water-quality evidence position */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-white border border-orange-200 rounded-xl p-5 shadow-sm">
+          <div className="flex items-center gap-2"><Droplets size={16} className="text-orange-500" /><h4 className="font-semibold text-gray-700">N6 Primary-Outfall Water Quality</h4><span className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">CONDITIONAL · D1</span></div>
+          <p className="text-sm font-semibold text-orange-800 mt-3">N6 remains removed. No live N6 compliance evidence is available.</p>
+          <p className="text-xs text-gray-500 mt-2">{n6Decision.gap}</p>
+          <div className="mt-3 space-y-1">{n6Decision.options.map(option => <div key={option} className="text-xs text-gray-600 bg-gray-50 rounded-lg px-2 py-1">{option}</div>)}</div>
+          <div className="text-xs text-blue-700 bg-blue-50 border border-blue-100 rounded-lg p-2 mt-3"><strong>Revision 7 recommendation:</strong> {n6Decision.recommendation}.</div>
         </div>
-        <p className="text-xs text-gray-400 mb-4">
-          N6 is co-located at the outfall (with N3/N4) — it measures what TSM discharges into Sg. Klang.
-          <strong className="text-red-600"> It is not a flood-control signal and never gates or discharges anything.</strong>
-        </p>
-
-        {/* The three locked parameters vs EQA Standard A advisory benchmark */}
-        <div className="grid grid-cols-3 gap-3">
-          {n6Reading.params.map(p => {
-            const over = breachesStdA(p)
-            return (
-              <div key={p.key} className={`rounded-xl p-3 text-center border ${over ? 'bg-red-50 border-red-200' : 'bg-teal-50 border-teal-100'}`}>
-                <div className={`text-lg font-black ${over ? 'text-red-600' : 'text-teal-700'}`}>{p.value}<span className="text-xs font-normal ml-0.5">{p.unit}</span></div>
-                <div className="text-xs text-gray-500 mt-0.5">{p.label}</div>
-                <div className={`text-xs mt-1 font-semibold ${over ? 'text-red-600' : 'text-teal-600'}`}>
-                  {over ? '⚠ over' : '✓ within'} Std A ≤ {p.stdA}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-
-        {/* MSMA load-reduction targets (design basis) */}
-        <div className="mt-4">
-          <div className="text-xs font-semibold text-gray-600 mb-2">MSMA 2nd Ed. Table 1.4 — annual load-reduction design basis (40 mm WQV)</div>
-          <div className="flex flex-wrap gap-2">
-            {MSMA_TARGETS.map(t => (
-              <span key={t.label} className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 font-medium">{t.label}: {t.target}%</span>
-            ))}
-          </div>
-        </div>
-
-        <div className="mt-3 space-y-1 text-xs text-gray-400">
-          <div><strong className="text-gray-500">Parameters (locked):</strong> NH₃-N · BOD · TSS — TSS is the master indicator (metals & oil/grease attach to suspended solids). EQA Std A is an <em>advisory</em> benchmark, not statutory for stormwater.</div>
-          <div><strong className="text-gray-500">Receiving water:</strong> {n6Reading.receivingClass}</div>
-          <div><strong className="text-gray-500">Out of scope:</strong> {n6Reading.outOfScope}</div>
+        <div className="bg-white border border-teal-100 rounded-xl p-5 shadow-sm">
+          <div className="flex items-center gap-2"><Droplets size={16} className="text-teal-500" /><h4 className="font-semibold text-gray-700">N8 Confirmed Water-Quality Evidence</h4><span className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-700">CONTINUOUS</span></div>
+          <div className="grid grid-cols-2 gap-2 mt-3">{n8Reading.params.map(param => { const over = breachesStdA(param); return <div key={param.key} className={`rounded-lg border p-3 ${over ? 'bg-red-50 border-red-200' : 'bg-teal-50 border-teal-100'}`}><div className={`text-lg font-black ${over ? 'text-red-700' : 'text-teal-800'}`}>{param.value}<span className="text-xs font-normal ml-1">{param.unit}</span></div><div className="text-xs text-gray-500">{param.label} · advisory ≤ {param.stdA}</div></div> })}</div>
+          <div className="bg-purple-50 border border-purple-100 rounded-lg p-3 mt-2"><div className="font-bold text-purple-800">BOD₅ {bod5Samples[0].value} {bod5Samples[0].unit}</div><div className="text-xs text-gray-500">Lab sample {bod5Samples[0].sampledAt} · next due {bod5Samples[0].nextDue}</div></div>
+          <div className="mt-3 flex flex-wrap gap-2">{MSMA_TARGETS.map(target => <span key={target.label} className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">{target.label}: {target.target}%</span>)}</div>
+          <p className="text-[11px] text-gray-400 mt-3">Continuous channels are NH₃-N and TSS. BOD₅ is periodic laboratory sampling. EQA Standard A is advisory for stormwater.</p>
         </div>
       </div>
 

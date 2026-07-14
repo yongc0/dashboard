@@ -25,6 +25,7 @@ function BorrowedFeedsPanel() {
   const didRiver = feedConfigs.find(f => f.id === 'did_river')!
   const didRain  = feedConfigs.find(f => f.id === 'did_rain')!
   const met      = feedConfigs.find(f => f.id === 'met_forecast')!
+  const tide     = feedConfigs.find(f => f.id === 'tide_forecast')!
 
   return (
     <div className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm">
@@ -36,7 +37,7 @@ function BorrowedFeedsPanel() {
         Borrowed feeds add lead-time and cross-check redundancy. The KPI-grade and evacuation-trigger signal is always the <ProvenanceTag src="onsite" /> owned reading.
       </p>
       <div className="space-y-3">
-        {/* DID river stage — N2 */}
+        {/* JPS/DID river stage — N2 API only */}
         <div className="p-3 rounded-lg border border-yellow-100 bg-yellow-50/40">
           <div className="flex items-center justify-between mb-1">
             <span className="text-sm font-semibold text-gray-700">{didRiver.name}</span>
@@ -47,7 +48,7 @@ function BorrowedFeedsPanel() {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2 text-xs text-gray-500 mt-2">
-            <div>Water-level station ID: <span className="font-bold text-orange-600">PENDING</span></div>
+            <div>Water-level reference: <span className="font-bold text-gray-700">{didRiver.stationId}</span> <span className="text-orange-600">(role/API mapping pending)</span></div>
             <div>District: {didRiver.district}</div>
             <div>Normal: <span className="font-bold text-gray-700">{didRiver.thresholds.normal} m</span></div>
             <div>Alert: <span className="font-bold text-gray-700">{didRiver.thresholds.alert} m</span></div>
@@ -56,7 +57,7 @@ function BorrowedFeedsPanel() {
           </div>
           <div className="flex items-start gap-2 mt-2 p-2 rounded bg-orange-50 border border-orange-200 text-xs text-orange-700">
             <AlertCircle size={11} className="flex-shrink-0 mt-0.5" />
-            <span>Thresholds read off the hydrograph by eye (±0.1 m), not confirmed against station metadata. <strong>Datum unconfirmed (AMSL vs local)</strong> — do NOT combine with 5.8 m AMSL design flood or 3.11–3.40 m AMSL ground until LUAS/DID confirm.</span>
+            <span>N2 is a JPS/DID API call and is not mapped as a physical node. Thresholds and datum remain provisional pending official metadata.</span>
           </div>
         </div>
 
@@ -70,11 +71,11 @@ function BorrowedFeedsPanel() {
             </div>
           </div>
           <div className="text-xs text-gray-500 mt-1">
-            Rainfall station ID: <span className="font-bold text-green-700">{didRain.stationId}</span> (confirmed). Cross-check: compare against N1 onsite; if delta &gt; 20%, raise data-integrity flag.
+            Rainfall station ID: <span className="font-bold text-green-700">{didRain.stationId}</span> (confirmed). Cross-check N1/N5 spatial gauges against the API; delta handling remains pending.
           </div>
           <div className="flex items-center gap-2 mt-2 p-2 rounded bg-gray-100 border border-gray-200 text-xs">
             <AlertCircle size={11} className="text-gray-400" />
-            <span className="text-gray-500">Station identified but live telemetry not yet wired — cross-check pending. N1 <ProvenanceTag src="onsite" /> reading is the sole rainfall trigger for now.</span>
+            <span className="text-gray-500">Live API telemetry is not yet wired. Onsite alert fusion uses the Revision 7 either-gauge rule: N1 or N5.</span>
           </div>
           {/* DID official rainfall-intensity categories */}
           <div className="mt-2 flex flex-wrap gap-1.5">
@@ -100,24 +101,27 @@ function BorrowedFeedsPanel() {
             Once live, forecast chart will carry [Met] attribution per data point.
           </div>
         </div>
+        <div className="p-3 rounded-lg border border-gray-100 bg-gray-50">
+          <div className="flex items-center justify-between"><span className="text-sm font-semibold text-gray-700">{tide.name}</span><span className="text-xs font-bold px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">NOT CONFIGURED</span></div>
+          <div className="text-xs text-gray-500 mt-1">Future input to the Level-2 automated drawdown rule. Source, trigger thresholds and PLC sequence are still PENDING and are not simulated as final logic.</div>
+        </div>
       </div>
     </div>
   )
 }
 
-// N7 — riverbank sunken field, tidally-connected wet basin (LOCKED design)
-function WetBasinPanel() {
+// Revision 7 reopens N7's area, coordinate, storage zones and volume.
+function ArenaPanel() {
   const n7 = nodeConfig.find(n => n.nodeId === 'N7')!
   return (
     <div className="bg-white border border-sky-100 rounded-xl p-5 shadow-sm">
       <div className="flex items-center gap-2 mb-1">
         <Waves size={16} className="text-sky-500" />
-        <h3 className="font-semibold text-gray-700">N7 — Riverbank Sunken Field · Auxiliary Detention</h3>
-        <span className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-700">WET BASIN · LOCKED</span>
+        <h3 className="font-semibold text-gray-700">N7 — Sunken Arena · Storage Reconciliation</h3>
+        <span className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">DECISION D4</span>
       </div>
       <p className="text-xs text-gray-400 mb-4">
-        Tidally-connected wet basin (Path 2) — a sealed/lined dry tank was rejected as fighting an unwinnable water table.
-        Reframes as a blue-green wetland; courts stay at the north end, lower terraces submerge at peaks.
+        The dimensioned plan confirms the Jalan Srikandi site identity but not its GPS coordinate. It also shows that the arena is not one uniform storage surface.
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {n7.specs?.map((s, i) => (
@@ -130,7 +134,7 @@ function WetBasinPanel() {
       </div>
       <div className="mt-3 flex items-start gap-2 p-2 rounded bg-sky-50 border border-sky-200 text-xs text-sky-800">
         <Info size={11} className="flex-shrink-0 mt-0.5" />
-        <span>Still to engineer: river-facing berm crested &gt; 5.8 m AMSL <em>or</em> documented acceptance of tidal connection; non-return/flap valve on any river connection. Storage target of 40,000 m³ is negotiable, not fixed.</span>
+        <span><strong>No authoritative storage volume, freeboard or time-to-fill is shown.</strong> The 15,000 m² plan value is a fourth unreconciled area figure, and zone inundation suitability remains undecided.</span>
       </div>
     </div>
   )
@@ -141,7 +145,8 @@ const BUCKET_A = [
   { item: 'Catchment area', note: 'Draining to TSM outfall. ~3× original footprint qualitatively (Zone D RA / FMT 2022) — NOT a usable km² figure.' },
   { item: 'Z_invert', note: 'Surveyed outfall invert at N3. Two unsourced candidates discarded. LUAS/DID survey or as-built drawings required.' },
   { item: 'Rainfall hyetograph', note: 'Temporal distribution of the 100-ARI design storm.' },
-  { item: 'Datum confirmation', note: 'AMSL vs local/chart for the Sg. Klang gauge. Request term: "National Geodetic Vertical Datum" (JUPEM). Gates N2 thresholds AND N7 freeboard.' },
+  { item: 'N7 Decision D4', note: 'Verify coordinate, storage zones, authoritative area/volume and sensor placement.' },
+  { item: 'N4 pipe survey', note: 'Pipe diameter and material block selection of the clamp-on ultrasonic flow-anomaly sensor.' },
 ]
 
 function BucketAPanel() {
@@ -339,8 +344,8 @@ export default function FloodRiskTab() {
       {/* Borrowed feeds — provenance behind the chart above */}
       <BorrowedFeedsPanel />
 
-      {/* N7 auxiliary detention — tidally-connected wet basin */}
-      <WetBasinPanel />
+      {/* N7 arena storage reconciliation */}
+      <ArenaPanel />
 
       {/* Bucket A — pending field data that gates the model */}
       <BucketAPanel />

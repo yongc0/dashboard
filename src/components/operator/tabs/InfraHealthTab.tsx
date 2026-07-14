@@ -1,6 +1,7 @@
 import { format, differenceInDays } from 'date-fns'
-import { Battery, Sun, Wifi, Zap, Wrench, AlertTriangle, CheckCircle, XCircle } from 'lucide-react'
+import { AlertTriangle, Battery, CheckCircle, Cpu, Radio, Sun, Wifi, Wrench, XCircle, Zap } from 'lucide-react'
 import { assets, sensors, solarStats } from '../../../data/mockData'
+import { c1Telemetry, controllerBOM, gatewayStatus } from '../../../data/controllerConfig'
 
 const STATUS_CONFIG = {
   operational: { label: 'Operational', color: 'text-green-700 bg-green-100', icon: <CheckCircle size={13} /> },
@@ -9,174 +10,80 @@ const STATUS_CONFIG = {
 }
 
 const CALIBRATION_ROWS = [
-  { name: 'N1 Rain Gauge (TSM)', type: 'Radar FMCW + tipping-bucket cross-check', cal: 'Factory cal.; field acceptance pending', ref: 'DID rainfall station 3015084 cross-check (not wired)', status: 'pending' },
-  { name: 'N2 Sg. Klang DID Feed', type: 'Borrowed InfoBanjir water-level feed', cal: 'PENDING water-level station ID', ref: 'DID station metadata + datum confirmation required', status: 'pending' },
-  { name: 'N3 Water Gate & Pump House', type: 'Radar FMCW', cal: 'Field recalibration required after stale-contact event', ref: 'Surveyed Z_invert still PENDING', status: 'attention' },
-  { name: 'N4 Pump Station', type: 'Pressure / level transducer', cal: 'Factory cal.; head-derating pending', ref: 'Q_pump 10.2 m³/s nameplate caveat applies', status: 'valid' },
+  { name: 'N1 Rainfall', type: 'Tipping-bucket gauge', cal: 'Field acceptance pending', ref: 'JPS/DID rainfall 3015084 API cross-check', status: 'pending' },
+  { name: 'N1 Drain Level', type: 'Kisters HyQuant L20 FMCW', cal: 'Field acceptance pending', ref: 'Dedicated drain level / dh/dt channel', status: 'pending' },
+  { name: 'N2 JPS/DID API', type: 'External API — no mapped hardware', cal: 'API access pending', ref: '3015432 / 3015084 · metadata and datum confirmation', status: 'pending' },
+  { name: 'N3 Primary', type: 'OTT RLS 500 radar', cal: 'Recalibration after stale contact', ref: 'Independent pressure-sensor agreement required', status: 'attention' },
+  { name: 'N3 Independent', type: 'Vented pressure transducer', cal: 'Acceptance pending', ref: 'FAULT on delta beyond PENDING tolerance', status: 'pending' },
+  { name: 'N4 Flow Anomaly', type: 'Clamp-on ultrasonic flow', cal: 'BLOCKED', ref: 'Pipe diameter/material required · not calibrated Qin/Qout', status: 'pending' },
+  { name: 'C1 Local Pair', type: 'Dedicated gate/downstream level sensors', cal: 'Acceptance pending', ref: 'Local PLC inputs · not shared with N1 or N3', status: 'pending' },
 ]
 
-// Gantt-style bar (simplified: % through 90-day window)
 function GanttBar({ from, to, status }: { from: Date; to: Date; status: string }) {
   const now = new Date()
-  const windowStart = new Date(now.getTime() - 30 * 86400000)
-  const windowEnd = new Date(now.getTime() + 90 * 86400000)
-  const total = windowEnd.getTime() - windowStart.getTime()
-  const startPct = Math.max(0, (from.getTime() - windowStart.getTime()) / total) * 100
-  const endPct = Math.min(100, (to.getTime() - windowStart.getTime()) / total) * 100
+  const start = new Date(now.getTime() - 30 * 86400000)
+  const end = new Date(now.getTime() + 90 * 86400000)
+  const total = end.getTime() - start.getTime()
+  const left = Math.max(0, (from.getTime() - start.getTime()) / total) * 100
+  const right = Math.min(100, (to.getTime() - start.getTime()) / total) * 100
   const colors: Record<string, string> = { operational: '#22c55e', maintenance: '#eab308', fault: '#ef4444' }
+  return <div className="relative w-full h-5 bg-gray-100 rounded-full"><div className="absolute top-0 h-5 rounded-full opacity-70" style={{ left: `${left}%`, width: `${Math.max(2, right - left)}%`, background: colors[status] ?? '#6b7280' }} /><div className="absolute inset-y-0 w-px bg-blue-500 opacity-60" style={{ left: '25%' }} /></div>
+}
+
+export default function InfraHealthTab() {
+  const installedSensors = sensors.filter(sensor => sensor.deployment === 'installed')
   return (
-    <div className="relative w-full h-5 bg-gray-100 rounded-full">
-      <div className="absolute top-0 h-5 rounded-full opacity-70" style={{ left: `${startPct}%`, width: `${endPct - startPct}%`, background: colors[status] || '#6b7280' }} />
-      <div className="absolute top-0 bottom-0 w-px bg-blue-500 opacity-60" style={{ left: '25%' }} title="Today" />
+    <div className="p-4 md:p-6 space-y-6">
+      <section className="bg-white border border-gray-100 rounded-xl shadow-sm">
+        <h3 className="font-semibold text-gray-700 px-5 py-4 border-b border-gray-100">Asset Health</h3>
+        <div className="divide-y divide-gray-50">
+          {assets.map(asset => {
+            const cfg = STATUS_CONFIG[asset.status]
+            const days = differenceInDays(asset.nextMaintenance, new Date())
+            return <div key={asset.id} className="px-5 py-3 flex flex-wrap items-center gap-4"><div className="flex-1 min-w-52"><div className="font-medium text-gray-800 text-sm">{asset.name}</div><div className="text-xs text-gray-400">Last maintained {format(asset.lastMaintained, 'dd MMM yyyy')}</div></div><div className="w-48"><GanttBar from={asset.lastMaintained} to={asset.nextMaintenance} status={asset.status} /><div className="text-xs text-gray-400 mt-1">Next: {days < 0 ? 'OVERDUE' : `${days}d`}</div></div><span className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full ${cfg.color}`}>{cfg.icon}{cfg.label}</span></div>
+          })}
+        </div>
+      </section>
+
+      <section className="bg-white border border-blue-100 rounded-xl shadow-sm">
+        <div className="px-5 py-4 border-b border-gray-100 flex flex-wrap items-center gap-2"><Cpu size={17} className="text-blue-950" /><h3 className="font-semibold text-gray-700">C1 PLC, Penstock & Warning-System Health</h3><span className="ml-auto text-xs font-bold px-2 py-1 rounded-full bg-green-100 text-green-700">PLC {c1Telemetry.plcHealthy ? 'HEALTHY' : 'FAULT'}</span></div>
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 p-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {controllerBOM.map(item => <div key={item.item} className="border border-gray-100 rounded-lg p-2"><div className="font-semibold text-gray-700 text-xs">{item.item}</div><div className={`text-xs font-bold mt-1 ${item.status === 'CONFIRMED' ? 'text-green-600' : 'text-amber-600'}`}>{item.status}</div><div className="text-[10px] text-gray-400 mt-0.5">{item.note}</div></div>)}
+          </div>
+          <div>
+            <div className="grid grid-cols-2 gap-2 mb-4"><Info label="PLC program" value={c1Telemetry.programRevision} /><Info label="UPS" value={c1Telemetry.upsState} pending /><Info label="Modbus RTU" value={c1Telemetry.modbusHealthy ? 'HEALTHY' : 'FAULT'} /><Info label="Local log" value={c1Telemetry.localLogRetention} pending /></div>
+            <div className="text-xs font-bold text-gray-600 mb-2 flex items-center gap-1"><Radio size={12} />Redundant gateways</div>
+            {gatewayStatus.map(gateway => <div key={gateway.id} className="grid grid-cols-[40px_1fr_auto] gap-2 border-b border-gray-100 py-2 text-xs"><strong className="text-blue-950">{gateway.id}</strong><span className="text-gray-600">{gateway.site}<span className="block text-[10px] text-gray-400">{gateway.backhaul} · backup {gateway.backup}</span></span><span className="font-bold text-amber-600">{gateway.status}</span></div>)}
+            <p className="text-[11px] text-gray-400 mt-3">Two physically separated gateways with diverse backhaul are fixed; exact sites remain subject to the RF survey.</p>
+          </div>
+        </div>
+      </section>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <section className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm">
+          <h4 className="font-semibold text-gray-700 mb-4 flex items-center gap-2"><Zap size={16} className="text-yellow-500" />Power</h4>
+          {installedSensors.map(sensor => <div key={sensor.id} className="flex items-center gap-3 mb-3"><Sun size={14} className={sensor.solarCharging ? 'text-yellow-500' : 'text-gray-300'} /><div className="flex-1"><div className="text-xs text-gray-500">{sensor.name}</div><div className="bg-gray-100 rounded-full h-1.5 mt-1"><div className="h-1.5 rounded-full bg-green-500" style={{ width: `${sensor.batteryPct}%` }} /></div></div><Battery size={13} /><span className="text-xs font-bold">{sensor.batteryPct}%</span></div>)}
+          <div className="border-t border-gray-100 pt-3 text-sm flex justify-between"><span className="text-gray-500">Solar instant output</span><strong className="text-yellow-600">{solarStats.instantKW} kW</strong></div>
+          <div className="text-xs text-amber-700 bg-amber-50 rounded-lg p-2 mt-3">N4 mains and N5 Solar Boardwalk power tie-ins remain pending. C1 UPS sizing is not yet costed.</div>
+        </section>
+        <section className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm">
+          <h4 className="font-semibold text-gray-700 mb-4 flex items-center gap-2"><Wifi size={16} className="text-blue-500" />Communications</h4>
+          {installedSensors.map(sensor => <div key={sensor.id} className="flex items-center justify-between border-b border-gray-50 py-2 text-sm"><span className="text-gray-600">{sensor.nodeId} LoRaWAN</span><strong className={sensor.loraUptime > 98 ? 'text-green-600' : 'text-yellow-600'}>{sensor.loraUptime}%</strong></div>)}
+          <div className="flex items-center justify-between border-b border-gray-50 py-2 text-sm"><span className="text-gray-600">C1 local control</span><strong className="text-green-600">INDEPENDENT OF CLOUD</strong></div>
+          <div className="flex items-center justify-between border-b border-gray-50 py-2 text-sm"><span className="text-gray-600">C1 Modbus/LoRa telemetry</span><strong className="text-green-600">HEALTHY</strong></div>
+          <div className="flex items-center justify-between py-2 text-sm"><span className="text-gray-600">N2 JPS/DID</span><strong className="text-amber-600">API CALL · PARTIAL</strong></div>
+        </section>
+      </div>
+
+      <section className="bg-white border border-gray-100 rounded-xl shadow-sm overflow-x-auto">
+        <h3 className="font-semibold text-gray-700 px-5 py-4 border-b border-gray-100">Sensor Calibration & Provenance</h3>
+        <table className="w-full text-sm min-w-[850px]"><thead><tr className="text-xs text-gray-400 uppercase"><th className="text-left px-5 py-2">Sensor</th><th className="text-left px-5 py-2">Type</th><th className="text-left px-5 py-2">Calibration</th><th className="text-left px-5 py-2">Reference</th><th className="text-left px-5 py-2">Status</th></tr></thead><tbody className="divide-y divide-gray-50">{CALIBRATION_ROWS.map(row => <tr key={row.name}><td className="px-5 py-3 font-medium text-gray-800">{row.name}</td><td className="px-5 py-3 text-gray-500">{row.type}</td><td className="px-5 py-3 text-gray-500">{row.cal}</td><td className="px-5 py-3 text-gray-500">{row.ref}</td><td className="px-5 py-3">{row.status === 'attention' ? <span className="flex items-center gap-1 text-yellow-700 text-xs font-bold"><AlertTriangle size={12} />Attention</span> : <span className="flex items-center gap-1 text-gray-500 text-xs font-bold"><AlertTriangle size={12} />Pending</span>}</td></tr>)}</tbody></table>
+      </section>
     </div>
   )
 }
 
-export default function InfraHealthTab() {
-  // Only owned hardware carries battery/LoRa telemetry. N2 is a borrowed DID feed —
-  // showing it at 0% battery would misread as a fault.
-  const onsiteSensors = sensors.filter(s => s.provenance === 'onsite')
-
-  return (
-    <div className="p-4 md:p-6 space-y-6">
-      {/* Asset health */}
-      <div className="bg-white border border-gray-100 rounded-xl shadow-sm">
-        <div className="px-5 py-4 border-b border-gray-50">
-          <h3 className="font-semibold text-gray-700">Asset Health</h3>
-        </div>
-        <div className="divide-y divide-gray-50">
-          {assets.map((a, i) => {
-            const cfg = STATUS_CONFIG[a.status]
-            const daysUntil = differenceInDays(a.nextMaintenance, new Date())
-            return (
-              <div key={`${a.id}-${i}`} className="px-5 py-3 flex items-center gap-4">
-                <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-base">
-                  {a.type === 'pump' ? '⚙️' : a.type === 'gate' ? '🚧' : a.type === 'generator' ? '⚡' : '📡'}
-                </div>
-                <div className="flex-1">
-                  <div className="font-medium text-gray-800 text-sm">{a.name}</div>
-                  <div className="text-xs text-gray-400">Last maintained: {format(a.lastMaintained, 'dd MMM yyyy')}</div>
-                </div>
-                <div className="w-48">
-                  <GanttBar from={a.lastMaintained} to={a.nextMaintenance} status={a.status} />
-                  <div className="text-xs text-gray-400 mt-0.5">Next: {daysUntil < 0 ? <span className="text-red-600 font-bold">OVERDUE</span> : `in ${daysUntil}d`}</div>
-                </div>
-                <span className={`flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${cfg.color}`}>
-                  {cfg.icon}{cfg.label}
-                </span>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Power & comms panel — owned onsite hardware only (N2 is a borrowed DID feed) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm">
-          <h4 className="font-semibold text-gray-700 mb-4 flex items-center gap-2"><Zap size={16} className="text-yellow-500" /> Power & Solar</h4>
-          <div className="space-y-3">
-            {onsiteSensors.map(s => (
-              <div key={s.id} className="flex items-center gap-3">
-                <Sun size={14} className={s.solarCharging ? 'text-yellow-400' : 'text-gray-300'} />
-                <div className="flex-1">
-                  <div className="text-xs text-gray-500">{s.name.split('(')[0].trim()}</div>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <div className="flex-1 bg-gray-100 rounded-full h-1.5">
-                      <div className="h-1.5 rounded-full transition-all" style={{ width: `${s.batteryPct}%`, background: s.batteryPct > 50 ? '#22c55e' : s.batteryPct > 20 ? '#eab308' : '#ef4444' }} />
-                    </div>
-                    <span className="text-xs font-bold text-gray-700 w-8">{s.batteryPct}%</span>
-                  </div>
-                </div>
-                <Battery size={14} className={s.batteryPct > 50 ? 'text-green-500' : 'text-yellow-500'} />
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 pt-3 border-t border-gray-50">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Solar instant output</span>
-              <span className="font-bold text-yellow-600">{solarStats.instantKW} kW</span>
-            </div>
-            <div className="flex justify-between text-sm mt-1">
-              <span className="text-gray-500">Today's generation</span>
-              <span className="font-bold text-gray-800">{solarStats.todayKWh} kWh</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm">
-          <h4 className="font-semibold text-gray-700 mb-4 flex items-center gap-2"><Wifi size={16} className="text-blue-500" /> Comms & Connectivity</h4>
-          <div className="space-y-3">
-            {onsiteSensors.map(s => (
-              <div key={s.id} className="flex items-center justify-between">
-                <div>
-                  <div className="text-xs text-gray-500">{s.type} node</div>
-                  <div className="text-xs font-semibold text-gray-700">LoRaWAN</div>
-                </div>
-                <div className="text-right">
-                  <div className={`text-sm font-bold ${s.loraUptime > 98 ? 'text-green-600' : s.loraUptime > 95 ? 'text-yellow-600' : 'text-red-600'}`}>{s.loraUptime}%</div>
-                  <div className="text-xs text-gray-400">uptime</div>
-                </div>
-                <div className={`w-2 h-2 rounded-full ${s.loraUptime > 98 ? 'bg-green-500' : s.loraUptime > 95 ? 'bg-yellow-500' : 'bg-red-500'}`} />
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 pt-3 border-t border-gray-50 space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Cellular backhaul</span>
-              <span className="font-bold text-green-600">Active</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-500">LoRaWAN gateway</span>
-              <span className="font-bold text-green-600">Online</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Offline fallback (SMS)</span>
-              <span className="font-bold text-yellow-600">Spec pending</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-500">N2 (DID InfoBanjir)</span>
-              <span className="font-bold text-gray-400">Borrowed feed — no owned hardware</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Per-sensor calibration */}
-      <div className="bg-white border border-gray-100 rounded-xl shadow-sm">
-        <div className="px-5 py-4 border-b border-gray-50">
-          <h3 className="font-semibold text-gray-700">Sensor Calibration & Provenance</h3>
-        </div>
-        <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-xs text-gray-400 uppercase tracking-wide">
-              <th className="text-left px-5 py-2">Sensor</th>
-              <th className="text-left px-5 py-2">Type</th>
-              <th className="text-left px-5 py-2">Last Calibrated</th>
-              <th className="text-left px-5 py-2">Reference</th>
-              <th className="text-left px-5 py-2">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {CALIBRATION_ROWS.map(r => (
-              <tr key={r.name} className="hover:bg-gray-50/50">
-                <td className="px-5 py-3 font-medium text-gray-800">{r.name}</td>
-                <td className="px-5 py-3 text-gray-500">{r.type}</td>
-                <td className="px-5 py-3 text-gray-500">{r.cal}</td>
-                <td className="px-5 py-3 text-gray-500">{r.ref}</td>
-                <td className="px-5 py-3">
-                  {r.status === 'valid'
-                    ? <span className="flex items-center gap-1 text-green-700 text-xs font-bold"><CheckCircle size={12} /> Valid</span>
-                    : r.status === 'attention'
-                      ? <span className="flex items-center gap-1 text-yellow-700 text-xs font-bold"><AlertTriangle size={12} /> Attention</span>
-                      : <span className="flex items-center gap-1 text-gray-500 text-xs font-bold"><AlertTriangle size={12} /> Pending</span>}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        </div>
-      </div>
-    </div>
-  )
+function Info({ label, value, pending = false }: { label: string; value: string; pending?: boolean }) {
+  return <div className="bg-gray-50 border border-gray-100 rounded-lg p-2"><div className="text-[10px] text-gray-400">{label}</div><div className={`font-bold text-xs ${pending ? 'text-amber-600' : 'text-gray-800'}`}>{value}</div></div>
 }

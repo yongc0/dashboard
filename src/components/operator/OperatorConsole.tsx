@@ -59,7 +59,9 @@ export default function OperatorConsole({ onSwitchToPublic }: Props) {
       {/* Top bar */}
       <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-4 sticky top-0 z-40 shadow-sm">
         <div className="flex items-center gap-3">
-          <img src="/logo.png" alt="Resilience 360" className="h-9 w-auto rounded-md" />
+          <div className="bg-[#111b57] rounded-lg px-2 py-1">
+            <img src="/logo.png" alt="Resilience 360" className="h-9 w-auto object-contain" />
+          </div>
           <div>
             <div className="text-sm font-bold text-gray-800">Flood Monitoring Dashboard</div>
             <div className="text-xs text-gray-400">Taman Sri Muda · Operator Console</div>

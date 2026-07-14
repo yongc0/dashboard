@@ -62,7 +62,7 @@ export default function PublicView() {
   const publicReadings = [
     { label: t.sensorLabels.riverStage, value: t.sensorLabels.pending, icon: '🌊' },
     { label: t.sensorLabels.rainfallNow, value: rainfallSignal?.value ?? t.sensorLabels.pending, icon: '🌧️' },
-    { label: t.sensorLabels.tidalLevel, value: tidalNode ? `${tidalNode.waterLevel.toFixed(2)} m` : t.sensorLabels.pending, icon: '🌊' },
+    { label: t.sensorLabels.tidalLevel, value: tidalNode?.waterLevel !== undefined ? `${tidalNode.waterLevel.toFixed(2)} m` : t.sensorLabels.pending, icon: '🌊' },
     { label: t.sensorLabels.riseRate, value: riseSignal?.value ?? t.sensorLabels.pending, icon: '📈' },
   ]
 
@@ -124,7 +124,9 @@ export default function PublicView() {
       {/* Header — logo + always-visible 4-language selector */}
       <div className="px-4 pt-4 pb-2 w-full max-w-md mx-auto">
         <div className="flex items-center justify-between mb-2.5">
-          <img src="/logo.png" alt="Resilience 360" className="h-9 w-auto rounded-md shadow-md" />
+          <div className="bg-[#111b57] rounded-lg px-2 py-1 shadow-md">
+            <img src="/logo.png" alt="Resilience 360" className="h-9 w-auto object-contain" />
+          </div>
           <span className="text-white/60 text-xs font-semibold tracking-widest uppercase">Flood Alert</span>
         </div>
         <div className="grid grid-cols-4 gap-1.5">
@@ -179,6 +181,32 @@ export default function PublicView() {
             {([1, 2, 3, 4] as AlertLevel[]).map(step => (
               <div key={step} className={`h-2 rounded-full ${step <= level ? 'bg-white' : 'bg-white/20'}`} />
             ))}
+          </div>
+        </div>
+
+        {/* Four-level warning legend — labels follow the selected language */}
+        <div className="w-full max-w-md bg-white rounded-2xl p-3 mb-4 shadow-lg text-left">
+          <div className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-2">{t.levelLegend}</div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {([1, 2, 3, 4] as AlertLevel[]).map(legendLevel => {
+              const active = legendLevel === level
+              const info = t.levels[legendLevel]
+              return (
+                <div
+                  key={legendLevel}
+                  aria-current={active ? 'true' : undefined}
+                  className={`rounded-xl border-2 px-2 py-2 transition-all ${active ? 'border-gray-900 shadow-md scale-[1.02]' : 'border-transparent'}`}
+                  style={{ background: `${LEVEL_COLORS[legendLevel]}18` }}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: LEVEL_COLORS[legendLevel] }} />
+                    <span className="text-xs font-black text-gray-800">{legendLevel}</span>
+                    {active && <span className="ml-auto text-[9px] font-black text-gray-900">{t.nowLabel}</span>}
+                  </div>
+                  <div className="text-[11px] font-bold text-gray-700 mt-1 leading-tight">{info.label}</div>
+                </div>
+              )
+            })}
           </div>
         </div>
 

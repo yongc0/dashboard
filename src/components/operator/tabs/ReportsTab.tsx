@@ -1,5 +1,7 @@
 import { useState } from 'react'
+import { format } from 'date-fns'
 import { FileText, Download, Check, Leaf, BarChart2, Shield, FileCheck } from 'lucide-react'
+import { controllerEvents } from '../../../data/controllerConfig'
 
 const REPORTS = [
   {
@@ -65,6 +67,17 @@ export default function ReportsTab() {
     }), 2500)
   }
 
+  const auditEntries = [
+    ...controllerEvents.map(event => ({
+      ts: format(event.timestamp, "yyyy-MM-dd'T'HH:mm:ssxxx"),
+      hash: event.id,
+      event: `${event.controllerId} ${event.type} source=${event.source} acknowledged=${event.acknowledged} message=${event.message}`,
+    })),
+    { ts: '2026-06-29T10:14:33Z', hash: 'a3f9...c12e', event: 'ALERT_L3_TRIGGERED signals=[n3_validated_dhdt,rainfall_either_gauge]' },
+    { ts: '2026-06-29T10:09:21Z', hash: '7b2d...88fa', event: 'N3_SENSOR_PAIR radar=3.10m pressure=3.08m delta=0.02m validity=accepted' },
+    { ts: '2026-06-29T09:30:12Z', hash: 'f56a...9911', event: 'N6_DECISION_GAP deployment=conditional decision=D1 live_evidence=false' },
+  ]
+
   return (
     <div className="p-4 md:p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -111,13 +124,7 @@ export default function ReportsTab() {
       <div className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm">
         <h4 className="font-semibold text-gray-700 mb-4">Recent Audit Log Entries</h4>
         <div className="font-mono text-xs space-y-1.5 text-gray-600">
-          {[
-            { ts: '2026-06-29T10:14:33Z', hash: 'a3f9...c12e', event: 'ALERT_L3_TRIGGERED signals=[fluvial_dhdt, rainfall_high, tidal_near_zinvert]' },
-            { ts: '2026-06-29T10:09:21Z', hash: '7b2d...88fa', event: 'SENSOR_READING node=tidal level=3.10 dhdt=0.22 confidence=degraded' },
-            { ts: '2026-06-29T09:45:00Z', hash: 'e1c7...3409', event: 'KPI_SNAPSHOT dhdt_ratio=0.847 coupon_adj=-0.25bps' },
-            { ts: '2026-06-29T09:30:12Z', hash: 'f56a...9911', event: 'RESIDENT_REPORT id=R003 location=Jln_Sri_Muda_8 status=escalated' },
-            { ts: '2026-06-29T08:00:00Z', hash: '2c3b...5518', event: 'SOLAR_SNAPSHOT instant_kw=4.2 today_kwh=18.6 nem_credits=2847' },
-          ].map(entry => (
+          {auditEntries.map(entry => (
             <div key={entry.hash} className="flex gap-3 border-b border-gray-50 pb-1.5 last:border-0">
               <span className="text-gray-300 flex-shrink-0">{entry.ts}</span>
               <span className="text-purple-600 flex-shrink-0">[{entry.hash}]</span>

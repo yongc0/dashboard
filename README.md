@@ -9,7 +9,7 @@ Live monitoring and early-warning dashboard for the Taman Sri Muda (TSM) compoun
 - **Public View** — no login, single glanceable screen for residents. Alert level 1–4 in plain language (BM/EN), recommended action, "time you have" indicator, incident reporting, share-alert.
 - **Operator/Judge Console** — 8 tabs: Overview, Live System, Infrastructure Health, Flood Risk Forecast (incl. lock-window forecast), SLB KPI/Finance, Reports, Community Ops, Scalability.
 
-The system triggers on **dh/dt (rate of rise)**, not absolute stage, and doubles as the KPI instrument for a Sustainability-Linked Bond. Unconfirmed parameters render as **PENDING** — no invented numbers anywhere.
+The system fuses validated **dh/dt (rate of rise)**, either-gauge rainfall, tidal condition and the JPS/DID API reference. A separate C1 industrial PLC controls the arena penstock locally; the cloud dashboard is supervisory. Unconfirmed parameters render as **PENDING** — no invented numbers anywhere.
 
 ## Run
 
@@ -35,9 +35,10 @@ React 19 · TypeScript 6 · Vite 8 · Tailwind 3 · Leaflet (maps) · Recharts (
 | `src/components/operator/` | Console + `tabs/` |
 | `src/components/map/` | Leaflet maps (operator + public) |
 | `src/data/nodeConfig.ts` | Single source of truth for nodes N1–N8 |
+| `src/data/controllerConfig.ts` | C1 PLC, interlocks, events and gateway status |
 | `src/data/alertFusion.ts` | L1–L4 alert ladder |
 | `src/data/feedConfigs.ts` | Borrowed feeds (DID, MetMalaysia) |
-| `src/data/waterQuality.ts` | N6/N8 WQ parameters |
+| `src/data/waterQuality.ts` | Conditional N6 decision + N8 continuous/lab WQ data |
 | `src/data/mockData.ts` | All demo data |
 | `src/i18n/strings.ts` | BM/EN strings |
 

@@ -5,13 +5,11 @@ import type {
 } from '../types'
 import { computeAlertLevel } from './alertFusion'
 
-// ─── Onsite operational sensor nodes ─────────────────────────────────────────
-// N1, N3, N4 = onsite owned sensors.
-// N2 = borrowed DID feed — PENDING station config (no reading here).
-// N5 = proposed (not installed). N6 = water quality (see below).
-
-// Current N1 rainfall reading (mm/hr) — single source for every component that shows it.
-export const RAINFALL_MMHR = 34
+// ─── Revision 7 onsite telemetry ─────────────────────────────────────────────
+// N2 is deliberately absent: it is a JPS/DID API feed, not a physical node.
+export const RAINFALL_N1_MMHR = 34
+export const RAINFALL_N5_MMHR: number | null = null // N5 is not yet instrumented
+export const RAINFALL_MMHR = Math.max(RAINFALL_N1_MMHR, RAINFALL_N5_MMHR ?? -Infinity)
 
 export const sensors: SensorNode[] = [
   {
@@ -20,6 +18,12 @@ export const sensors: SensorNode[] = [
     name: 'N1 — Rain Gauge, TSM (Pluvial)',
     type: 'pluvial',
     provenance: 'onsite',
+    deployment: 'installed',
+    metrics: [
+      { id: 'rainfall', label: 'Rain intensity', value: RAINFALL_N1_MMHR, unit: 'mm/hr', status: 'warning' },
+      { id: 'drain_level', label: 'Drain level', value: 0.34, unit: 'm', status: 'good' },
+      { id: 'drain_dhdt', label: 'Drain rise rate', value: 0.08, unit: 'm/hr', status: 'good' },
+    ],
     waterLevel: 0.34,
     waterLevelMax: 0.8,
     dhdt: 0.08,
@@ -35,6 +39,13 @@ export const sensors: SensorNode[] = [
     name: 'N3 — Water Gate & Pump House (Tidal/Outfall)',
     type: 'tidal',
     provenance: 'onsite',
+    deployment: 'installed',
+    metrics: [
+      { id: 'radar_level', label: 'Radar level', value: 3.1, unit: 'm', status: 'good' },
+      { id: 'pressure_level', label: 'Pressure level', value: 3.08, unit: 'm', status: 'good' },
+      { id: 'sensor_delta', label: 'Sensor delta', value: 0.02, unit: 'm', status: 'good', note: 'Fault tolerance PENDING' },
+      { id: 'dhdt', label: 'Validated rise rate', value: 0.22, unit: 'm/hr', status: 'warning' },
+    ],
     waterLevel: 3.1,
     waterLevelMax: 4.2,
     dhdt: 0.22,
@@ -48,28 +59,32 @@ export const sensors: SensorNode[] = [
   {
     id: 'N4',
     nodeId: 'N4',
-    name: 'N4 — Pump Station',
-    type: 'pump',
+    name: 'N4 — Pump Station Flow-Anomaly Node',
+    type: 'flow',
     provenance: 'onsite',
-    waterLevel: 1.92,
-    waterLevelMax: 3.0,
-    dhdt: 0.05,
-    lastContact: new Date(),
-    confidence: 'good',
-    batteryPct: 95,
-    solarCharging: true,
-    loraUptime: 99.8,
+    deployment: 'blocked',
+    metrics: [
+      { id: 'relative_flow', label: 'Relative flow', value: null, unit: '% baseline', status: 'pending' },
+      { id: 'flow_anomaly', label: 'Blockage/anomaly', value: 'PENDING SENSOR', status: 'pending', note: 'Pipe diameter/material required' },
+    ],
+    lastContact: null,
+    confidence: 'pending',
+    batteryPct: 0,
+    solarCharging: false,
+    loraUptime: 0,
   },
   {
-    id: 'N2',
-    nodeId: 'N2',
-    name: 'N2 — Sungai Klang Stage (DID InfoBanjir)',
-    type: 'fluvial',
-    provenance: 'DID',
-    waterLevel: 0,
-    waterLevelMax: 0,
-    dhdt: 0,
-    lastContact: null,   // feed not yet configured
+    id: 'N5',
+    nodeId: 'N5',
+    name: 'N5 — Retention Pond Level + Spatial Rain Gauge',
+    type: 'basin',
+    provenance: 'onsite',
+    deployment: 'proposed',
+    metrics: [
+      { id: 'pond_level', label: 'Pond level', value: null, unit: 'm', status: 'pending' },
+      { id: 'rainfall', label: 'Rain intensity', value: null, unit: 'mm/hr', status: 'pending', note: 'Second gauge confirmed; installation pending' },
+    ],
+    lastContact: null,
     confidence: 'pending',
     batteryPct: 0,
     solarCharging: false,
@@ -77,8 +92,8 @@ export const sensors: SensorNode[] = [
   },
 ]
 
-// Water-quality nodes N6 (discharge compliance, reporting-only) and N8 (pond-gate
-// release-control) now live in ./waterQuality.ts as two distinct nodes.
+// Water-quality state lives in ./waterQuality.ts. N6 is conditional on D1 and
+// N8 is monitoring-only; C1 owns local penstock control.
 
 // Node lookups by ID — never by array index (ordering is not a contract).
 export const getSensor = (nodeId: string) => sensors.find(s => s.nodeId === nodeId)
@@ -86,9 +101,11 @@ const n3 = getSensor('N3')!
 
 // ─── Alert state (computed from fusion) ──────────────────────────────────────
 const fusionResult = computeAlertLevel({
-  dhdt: n3.dhdt,                // N3 rate of rise
-  rainfall: RAINFALL_MMHR,      // N1 rainfall mm/hr (onsite)
-  tidalLevel: n3.waterLevel,    // N3 tidal reading
+  dhdt: n3.dhdt ?? null,        // N3 validated rate of rise
+  rainfallN1: RAINFALL_N1_MMHR,
+  rainfallN5: RAINFALL_N5_MMHR,
+  tidalLevel: n3.waterLevel ?? null,
+  tidalSensorValid: true,       // demo pair agrees; tolerance still PENDING
   didRiverLevel: null,          // DID feed not configured
 })
 
@@ -96,15 +113,16 @@ const fusionResult = computeAlertLevel({
 // Honest headline for the console: how many of the 4 signal nodes are reporting,
 // which are stale, which feeds are pending. Derived from sensors — never hardcoded.
 export function getSystemMode() {
-  const reporting = sensors.filter(s => s.lastContact !== null)
-  const stale = sensors.filter(s =>
+  const installed = sensors.filter(s => s.deployment === 'installed')
+  const reporting = installed.filter(s => s.lastContact !== null)
+  const stale = installed.filter(s =>
     s.lastContact !== null && (Date.now() - s.lastContact.getTime()) / 60000 > 5)
-  const pending = sensors.filter(s => s.confidence === 'pending')
+  const pending = sensors.filter(s => s.deployment !== 'installed')
   const reduced = stale.length > 0 || pending.length > 0
   return {
     reduced,
     reportingCount: reporting.length,
-    totalCount: sensors.length,
+    totalCount: installed.length,
     staleIds: stale.map(s => s.nodeId ?? s.id),
     pendingIds: pending.map(s => s.nodeId ?? s.id),
   }

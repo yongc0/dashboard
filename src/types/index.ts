@@ -4,16 +4,22 @@ export type Provenance = 'onsite' | 'DID' | 'Met' | 'JPS'
 
 export type NodeId = 'N1' | 'N2' | 'N3' | 'N4' | 'N5' | 'N6' | 'N7' | 'N8'
 
+export type ControllerId = 'C1' | 'C2'
+
+export type DeploymentStatus = 'installed' | 'conditional' | 'proposed' | 'blocked' | 'not_configured'
+
 export interface NodeFlags {
   locationUnderReview?: boolean  // N1 — project anchor, not confirmed worst bottleneck
-  proposed?: boolean             // N5 — inclusion pending SLB decision
-  reportingOnly?: boolean        // N6 — environmental logging only, never a flood-control signal
-  pending?: boolean              // N2 — no geographic fix yet
-  auxiliaryDetention?: boolean   // N7 — tidally-connected wet basin (auxiliary storage)
-  releaseControl?: boolean       // N8 — pond-gate release-control node (conditional hold authority)
+  proposed?: boolean
+  reportingOnly?: boolean
+  pending?: boolean
+  conditional?: boolean          // N6 — Decision D1; not currently installed
+  arenaStorage?: boolean         // N7 — storage zones/volume still under reconciliation
+  waterQuality?: boolean         // N8, plus N6 if Decision D1 reinstates it
   governmentAsset?: boolean      // N5 — existing government retention pond
-  datumUnconfirmed?: boolean     // N2/N7 — values inherit unconfirmed vertical datum
-  approximate?: boolean          // N2 — placeholder position, NOT a confirmed coordinate
+  datumUnconfirmed?: boolean
+  coordinateUnconfirmed?: boolean
+  apiOnly?: boolean              // N2 — JPS/DID software integration, never plotted as a project node
 }
 
 // Node-specific spec lines shown in the operator popup. caveat renders as a warning.
@@ -32,6 +38,7 @@ export interface NodePin {
   lng: number | null
   flags: NodeFlags
   provenance: Provenance
+  deployment: DeploymentStatus
   reading: { value: string; unit: string } | null
   lastContact: Date | null
   confidence: 'good' | 'degraded' | 'stale' | 'pending'
@@ -66,16 +73,70 @@ export interface SensorNode {
   id: string
   nodeId?: NodeId
   name: string
-  type: 'fluvial' | 'pluvial' | 'tidal' | 'pump'
+  type: 'pluvial' | 'tidal' | 'flow' | 'basin'
   provenance?: Provenance
-  waterLevel: number
-  waterLevelMax: number
-  dhdt: number
+  deployment: DeploymentStatus
+  metrics: TelemetryMetric[]
+  waterLevel?: number
+  waterLevelMax?: number
+  dhdt?: number
   lastContact: Date | null
   confidence: 'good' | 'degraded' | 'warning' | 'stale' | 'pending'
   batteryPct: number
   solarCharging: boolean
   loraUptime: number
+}
+
+export interface TelemetryMetric {
+  id: string
+  label: string
+  value: number | string | null
+  unit?: string
+  status?: 'good' | 'warning' | 'fault' | 'pending'
+  note?: string
+}
+
+export type PLCMode = 'AUTO' | 'MANUAL_LOCKOUT' | 'EMERGENCY_HOLD' | 'FAULT'
+export type GatePosition = 'OPEN' | 'CLOSED' | 'INTERMEDIATE' | 'INVALID'
+export type GateCommand = 'OPEN' | 'CLOSE' | 'HOLD' | 'NONE'
+export type TransitionState = 'CONFIRMED' | 'TRANSITIONING' | 'INTERLOCK_BLOCKED' | 'TIMEOUT' | 'JAMMED'
+
+export interface ControllerTelemetry {
+  controllerId: ControllerId
+  name: string
+  location: string
+  plcClass: string
+  deployment: DeploymentStatus
+  mode: PLCMode
+  command: GateCommand
+  confirmedPosition: GatePosition
+  transition: TransitionState
+  gateSideLevelM: number
+  gateSideDhdtMhr: number
+  downstreamLevelM: number
+  backflowInterlock: boolean
+  gateMotorCurrentA: number
+  motorJam: boolean
+  manualLockout: boolean
+  emergencyHold: boolean
+  mainsAvailable: boolean
+  upsState: 'ONLINE' | 'ON_BATTERY' | 'PENDING'
+  plcHealthy: boolean
+  telemetryHealthy: boolean
+  modbusHealthy: boolean
+  lastContact: Date
+  programRevision: string
+  localLogRetention: string
+}
+
+export interface ControllerEvent {
+  id: string
+  controllerId: ControllerId
+  timestamp: Date
+  type: string
+  message: string
+  source: 'PLC_LOCAL' | 'OPERATOR' | 'SYSTEM'
+  acknowledged: boolean
 }
 
 export interface AlertState {
@@ -148,6 +209,8 @@ export interface Lang {
   reportStatus: string
   shareAlert: string
   watchLevel: string
+  levelLegend: string
+  nowLabel: string
   prepare: string
   lastUpdated: string
   currentLevel: string

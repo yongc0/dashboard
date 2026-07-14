@@ -28,41 +28,46 @@ export interface FusionResult {
 
 export function computeAlertLevel(inputs: {
   dhdt: number | null           // from N3/N4 onsite
-  rainfall: number | null       // mm/hr from N1 onsite
+  rainfallN1: number | null     // mm/hr from N1 onsite
+  rainfallN5: number | null     // second spatial gauge; either-gauge rule
   tidalLevel: number | null     // from N3 onsite
+  tidalSensorValid: boolean     // false when N3 dual sensors disagree beyond tolerance
   didRiverLevel: number | null  // null = feed not configured
 }): FusionResult {
+  const rainfallValues = [inputs.rainfallN1, inputs.rainfallN5].filter((v): v is number => v !== null)
+  const rainfall = rainfallValues.length ? Math.max(...rainfallValues) : null
+  const rainSource = inputs.rainfallN5 !== null && inputs.rainfallN5 === rainfall ? 'N5' : 'N1'
   const signals: FusionSignal[] = [
     {
       id: 'dhdt',
       label: 'Rate of rise dh/dt',
-      active: inputs.dhdt !== null && FUSION_THRESHOLDS.dhdt_mhr !== null
+      active: inputs.tidalSensorValid && inputs.dhdt !== null && FUSION_THRESHOLDS.dhdt_mhr !== null
         ? inputs.dhdt > FUSION_THRESHOLDS.dhdt_mhr
         : false,
-      value: inputs.dhdt !== null ? `${inputs.dhdt.toFixed(2)} m/hr` : '—',
+      value: !inputs.tidalSensorValid ? 'N3 SENSOR FAULT' : inputs.dhdt !== null ? `${inputs.dhdt.toFixed(2)} m/hr` : '—',
       threshold: `> ${FUSION_THRESHOLDS.dhdt_mhr} m/hr`,
-      pending: false,
-      provenance: 'onsite (N3/N4)',
+      pending: !inputs.tidalSensorValid,
+      provenance: 'onsite (N3 validated pair)',
     },
     {
       id: 'rainfall',
-      label: 'Rain intensity (N1 onsite)',
-      active: inputs.rainfall !== null
-        ? inputs.rainfall > FUSION_THRESHOLDS.rainfall_mmhr
+      label: 'Rain intensity (N1 or N5)',
+      active: rainfall !== null
+        ? rainfall > FUSION_THRESHOLDS.rainfall_mmhr
         : false,
-      value: inputs.rainfall !== null ? `${inputs.rainfall} mm/hr` : '—',
+      value: rainfall !== null ? `${rainfall} mm/hr (${rainSource})` : '—',
       threshold: `> ${FUSION_THRESHOLDS.rainfall_mmhr} mm/hr`,
-      pending: false,
-      provenance: 'onsite (N1)',
+      pending: rainfall === null,
+      provenance: `onsite (${rainSource}; either-gauge rule)`,
     },
     {
       id: 'tidal_lock',
       label: 'Outfall lock (tidal ≥ Z_invert)',
       // Cannot compute lock state without Z_invert — flag as pending
       active: false,
-      value: inputs.tidalLevel !== null
+      value: inputs.tidalSensorValid && inputs.tidalLevel !== null
         ? `Tidal ${inputs.tidalLevel} m · Z_invert PENDING`
-        : '—',
+        : inputs.tidalSensorValid ? '—' : 'N3 SENSOR FAULT',
       threshold: 'Tidal ≥ Z_invert — Z_invert PENDING (field survey required)',
       pending: FUSION_THRESHOLDS.zinvert_m === null,
       provenance: 'onsite (N3) vs surveyed Z_invert',

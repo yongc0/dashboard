@@ -1,8 +1,9 @@
 import { format } from 'date-fns'
-import { Activity, Droplets, Zap, AlertOctagon, CloudRain } from 'lucide-react'
+import { Activity, Droplets, Cpu, AlertOctagon, CloudRain } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
-import { alertState, sensors, pondHistory, solarStats, getSensor, getSystemMode, RAINFALL_MMHR } from '../../../data/mockData'
+import { alertState, sensors, pondHistory, getSensor, getSystemMode, RAINFALL_N1_MMHR, RAINFALL_N5_MMHR } from '../../../data/mockData'
 import { classifyIntensity } from '../../../data/feedConfigs'
+import { c1Telemetry } from '../../../data/controllerConfig'
 import type { SensorNode } from '../../../types'
 
 const LEVEL_COLORS = ['', '#16a34a', '#ca8a04', '#ea580c', '#dc2626']
@@ -20,36 +21,37 @@ export default function OverviewTab() {
   const level = alertState.level
   const mode = getSystemMode()
   const n3 = getSensor('N3')
-  const rainClass = classifyIntensity(RAINFALL_MMHR)
+  const fusedRain = Math.max(RAINFALL_N1_MMHR, RAINFALL_N5_MMHR ?? -Infinity)
+  const rainClass = classifyIntensity(fusedRain)
 
   const kpis = [
     {
       label: 'Outfall / Tidal Level (N3)',
-      value: n3 ? `${n3.waterLevel} m` : '—',
-      sub: n3 ? `Max ${n3.waterLevelMax} m · last contact ${n3.lastContact ? format(n3.lastContact, 'HH:mm') : '—'}` : 'No reading',
+      value: n3?.waterLevel !== undefined ? `${n3.waterLevel} m` : '—',
+      sub: n3 ? `Radar 3.10 m · pressure 3.08 m · Δ 0.02 m` : 'No reading',
       icon: <Droplets size={20} className="text-blue-500" />,
-      pct: n3 ? n3.waterLevel / n3.waterLevelMax : 0,
+      pct: n3?.waterLevel && n3?.waterLevelMax ? n3.waterLevel / n3.waterLevelMax : 0,
     },
     {
-      label: 'Rain Intensity (N1)',
-      value: `${RAINFALL_MMHR} mm/hr`,
-      sub: `${rainClass.label} (DID scale ${rainClass.range})`,
+      label: 'Rain Intensity (Either Gauge)',
+      value: `${fusedRain} mm/hr`,
+      sub: `N1 ${RAINFALL_N1_MMHR} · N5 ${RAINFALL_N5_MMHR ?? 'PENDING'} · ${rainClass.label}`,
       icon: <CloudRain size={20} className="text-cyan-500" />,
-      pct: Math.min(1, RAINFALL_MMHR / 60),
+      pct: Math.min(1, fusedRain / 60),
     },
     {
       label: 'Rise Rate dh/dt (N3)',
-      value: n3 ? `${n3.dhdt} m/hr` : '—',
-      sub: 'Primary alert trigger · KPI signal',
-      icon: <Activity size={20} className="text-orange-500" />,
-      pct: n3 ? n3.dhdt / 0.3 : 0,
+      value: `${c1Telemetry.confirmedPosition}`,
+      sub: `${c1Telemetry.mode} · backflow interlock ${c1Telemetry.backflowInterlock ? 'ACTIVE' : 'clear'}`,
+      icon: <Cpu size={20} className="text-blue-950" />,
+      pct: c1Telemetry.plcHealthy ? 1 : 0,
     },
     {
-      label: 'Solar Output',
-      value: `${solarStats.instantKW} kW`,
-      sub: `${solarStats.todayKWh} kWh today`,
-      icon: <Zap size={20} className="text-yellow-500" />,
-      pct: solarStats.instantKW / 6,
+      label: 'Validated dh/dt (N3)',
+      value: n3?.dhdt !== undefined ? `${n3.dhdt} m/hr` : '—',
+      sub: 'Dual-sensor agreement required before fusion',
+      icon: <Activity size={20} className="text-orange-500" />,
+      pct: n3?.dhdt !== undefined ? n3.dhdt / 0.3 : 0,
     },
   ]
 
@@ -137,7 +139,7 @@ export default function OverviewTab() {
               ) : (
                 <>
                   <div className="text-lg font-bold text-gray-900">
-                    {s.type === 'pluvial' ? `${RAINFALL_MMHR} mm/hr` : `${s.waterLevel} m`}
+                    {s.metrics[0]?.value === null ? 'PENDING' : `${s.metrics[0]?.value}${s.metrics[0]?.unit ? ` ${s.metrics[0].unit}` : ''}`}
                   </div>
                   <div className="text-gray-400 text-xs">{s.name}</div>
                   <div className="text-xs text-gray-400 mt-2">♥ {s.lastContact ? format(s.lastContact, 'HH:mm:ss') : '—'}</div>

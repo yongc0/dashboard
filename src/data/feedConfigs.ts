@@ -1,7 +1,6 @@
 import type { FeedStatus } from '../types'
 
-// External borrowed feeds. All station IDs and thresholds are PENDING until
-// DID/MetMalaysia confirm the exact station and official threshold values.
+// External borrowed feeds. N2 is a software/API integration and has no map pin.
 // Never show fake numbers — render 'not_configured' state until wired.
 
 export const feedConfigs: FeedStatus[] = [
@@ -9,8 +8,8 @@ export const feedConfigs: FeedStatus[] = [
     id: 'did_river',
     name: 'DID InfoBanjir — Sg. Klang di Taman Sri Muda',
     source: 'DID',
-    stationId: null,                  // PENDING: water-level station ID not yet captured
-    waterLevelStationId: null,        // PENDING: same dropdown, Water Level tab — outstanding
+    stationId: '3015432',
+    waterLevelStationId: '3015432',
     district: 'Klang, Selangor',
     thresholds: {
       // Provisional — read off the official hydrograph by eye (±0.1 m), DATUM UNCONFIRMED.
@@ -21,7 +20,7 @@ export const feedConfigs: FeedStatus[] = [
     },
     status: 'partial',
     datumUnconfirmed: true,
-    note: 'Thresholds read off hydrograph chart, not yet confirmed against station metadata. Datum (AMSL vs local/chart) unconfirmed — do NOT combine with 5.8 m AMSL design flood or 3.11–3.40 m AMSL ground. Water-level station ID still outstanding.',
+    note: 'JPS/DID API call only — no physical N2 project node. Station 3015432 is listed in Revision 7; its role/API mapping, official metadata and datum still require confirmation.',
     lastReading: null,
     crossCheckDelta: null,
   },
@@ -55,6 +54,17 @@ export const feedConfigs: FeedStatus[] = [
       danger: null,
     },
     status: 'not_configured',
+    lastReading: null,
+  },
+  {
+    id: 'tide_forecast',
+    name: 'Published Tide Forecast — Automated Drawdown Input',
+    source: 'JPS',
+    stationId: null,
+    district: 'Klang',
+    thresholds: { normal: null, alert: null, warning: null, danger: null },
+    status: 'not_configured',
+    note: 'Revision 7 F4 input for the future Level-2 automated drawdown rule. Source, thresholds and control sequence remain PENDING.',
     lastReading: null,
   },
 ]
