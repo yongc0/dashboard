@@ -1,15 +1,18 @@
 import { subHours, subDays, subMinutes, addHours, format } from 'date-fns'
 import type {
-  SensorNode, AlertState, ForecastPoint, KPIPoint,
+  SensorNode, AlertState, ForecastPoint,
   AvoidedLossEvent, ResidentReport, AssetHealth, TideWindow
 } from '../types'
 import { computeAlertLevel } from './alertFusion'
 
-// ─── Revision 7 onsite telemetry ─────────────────────────────────────────────
+// ─── Revision 11 onsite telemetry ────────────────────────────────────────────
 // N2 is deliberately absent: it is a JPS/DID API feed, not a physical node.
 export const RAINFALL_N1_MMHR = 34
 export const RAINFALL_N5_MMHR: number | null = null // N5 is not yet instrumented
 export const RAINFALL_MMHR = Math.max(RAINFALL_N1_MMHR, RAINFALL_N5_MMHR ?? -Infinity)
+export const DRAIN_DHDT_N1_MHR = 0.08
+export const BASIN_DHDT_N5_N7_MHR: number | null = null
+export const L3_WARNING_ACTIVE = true // demo state: mandatory occupancy warning sequence active
 
 export const sensors: SensorNode[] = [
   {
@@ -22,11 +25,11 @@ export const sensors: SensorNode[] = [
     metrics: [
       { id: 'rainfall', label: 'Rain intensity', value: RAINFALL_N1_MMHR, unit: 'mm/hr', status: 'warning' },
       { id: 'drain_level', label: 'Drain level', value: 0.34, unit: 'm', status: 'good' },
-      { id: 'drain_dhdt', label: 'Drain rise rate', value: 0.08, unit: 'm/hr', status: 'good' },
+      { id: 'drain_dhdt', label: 'Drain rise rate', value: DRAIN_DHDT_N1_MHR, unit: 'm/hr', status: 'pending', note: 'Numeric trigger pending v11-retained calibration method' },
     ],
     waterLevel: 0.34,
     waterLevelMax: 0.8,
-    dhdt: 0.08,
+    dhdt: DRAIN_DHDT_N1_MHR,
     lastContact: new Date(),
     confidence: 'good',
     batteryPct: 92,
@@ -44,11 +47,10 @@ export const sensors: SensorNode[] = [
       { id: 'radar_level', label: 'Radar level', value: 3.1, unit: 'm', status: 'good' },
       { id: 'pressure_level', label: 'Pressure level', value: 3.08, unit: 'm', status: 'good' },
       { id: 'sensor_delta', label: 'Sensor delta', value: 0.02, unit: 'm', status: 'good', note: 'Fault tolerance PENDING' },
-      { id: 'dhdt', label: 'Validated rise rate', value: 0.22, unit: 'm/hr', status: 'warning' },
+      { id: 'outfall_lock', label: 'Outfall lock state', value: 'PENDING Z_invert', status: 'pending' },
     ],
     waterLevel: 3.1,
     waterLevelMax: 4.2,
-    dhdt: 0.22,
     // Stale: last contact 8 min ago — exceeds 5-min alert threshold
     lastContact: subMinutes(new Date(), 8),
     confidence: 'stale',
@@ -83,6 +85,25 @@ export const sensors: SensorNode[] = [
     metrics: [
       { id: 'pond_level', label: 'Pond level', value: null, unit: 'm', status: 'pending' },
       { id: 'rainfall', label: 'Rain intensity', value: null, unit: 'mm/hr', status: 'pending', note: 'Second gauge confirmed; installation pending' },
+      { id: 'basin_dhdt', label: 'Basin rise rate', value: BASIN_DHDT_N5_N7_MHR, unit: 'm/hr', status: 'pending', note: 'Numeric trigger pending v11-retained calibration method' },
+    ],
+    lastContact: null,
+    confidence: 'pending',
+    batteryPct: 0,
+    solarCharging: false,
+    loraUptime: 0,
+  },
+  {
+    id: 'N7',
+    nodeId: 'N7',
+    name: 'N7 — Sunken Arena Level + Basin dh/dt',
+    type: 'basin',
+    provenance: 'onsite',
+    deployment: 'proposed',
+    metrics: [
+      { id: 'arena_level', label: 'Arena level', value: null, unit: 'm', status: 'pending', note: 'Sensor range and exact setting-out pending' },
+      { id: 'basin_dhdt', label: 'Arena rise rate', value: null, unit: 'm/hr', status: 'pending', note: 'Numeric trigger pending v11-retained calibration method' },
+      { id: 'usable_storage', label: 'Net usable storage basis', value: '≈ 37,300', unit: 'm³', status: 'good' },
     ],
     lastContact: null,
     confidence: 'pending',
@@ -92,21 +113,20 @@ export const sensors: SensorNode[] = [
   },
 ]
 
-// Water-quality state lives in ./waterQuality.ts. N6 is conditional on D1 and
-// N8 is monitoring-only; C1 owns local penstock control.
+// Water-quality state lives in ./waterQuality.ts. N6 is reinstated probe-only;
+// N8 alone carries BOD5. C1 and C2 remain the local actuation authorities.
 
 // Node lookups by ID — never by array index (ordering is not a contract).
 export const getSensor = (nodeId: string) => sensors.find(s => s.nodeId === nodeId)
-const n3 = getSensor('N3')!
 
 // ─── Alert state (computed from fusion) ──────────────────────────────────────
 const fusionResult = computeAlertLevel({
-  dhdt: n3.dhdt ?? null,        // N3 validated rate of rise
   rainfallN1: RAINFALL_N1_MMHR,
-  rainfallN5: RAINFALL_N5_MMHR,
-  tidalLevel: n3.waterLevel ?? null,
-  tidalSensorValid: true,       // demo pair agrees; tolerance still PENDING
-  didRiverLevel: null,          // DID feed not configured
+  drainDhdtN1: DRAIN_DHDT_N1_MHR,
+  outfallLockedN3: null,        // requires surveyed Z_invert
+  basinDhdtN5N7: BASIN_DHDT_N5_N7_MHR,
+  l3WarningActive: L3_WARNING_ACTIVE,
+  preStormDrawdownActive: false, // L2 remains operator-initiated until F4 is defined
 })
 
 // ─── Derived system mode ──────────────────────────────────────────────────────
@@ -169,22 +189,6 @@ export const tideWindows: TideWindow[] = [
   { start: format(addHours(new Date(), 14.2), 'HH:mm'), end: format(addHours(new Date(), 17.2), 'HH:mm'), risk: 'medium' },
   { start: format(addHours(new Date(), 26.5), 'HH:mm'), end: format(addHours(new Date(), 29.5), 'HH:mm'), risk: 'low' },
 ]
-
-// SLB covenant semantics: HIGHER ratio = better performance.
-// ≥ 0.95 → coupon on rate (adj 0) · 0.85–0.95 → +25 bps step-up · < 0.85 → +50 bps.
-export const kpiTrend: KPIPoint[] = Array.from({ length: 90 }, (_, i) => {
-  const d = subDays(new Date(), 89 - i)
-  // Mid-series dip (day ~35–55) demonstrates the step-up mechanism; otherwise on covenant.
-  const dip = i > 35 && i < 55 ? 0.09 * Math.sin(((i - 35) / 20) * Math.PI) : 0
-  const ratio = +(0.965 + Math.sin(i / 9) * 0.012 - dip).toFixed(3)
-  const coupon = ratio >= 0.95 ? 0 : ratio >= 0.85 ? 0.25 : 0.5
-  return {
-    date: format(d, 'MMM d'),
-    dhdt: ratio,
-    threshold: 0.95,
-    couponAdj: coupon,
-  }
-})
 
 export const avoidedLossEvents: AvoidedLossEvent[] = [
   { date: '2026-03-12', alertLevel: 4, duration: 6, householdsProtected: 2847, estimatedDamagesAvoided: 4_200_000 },

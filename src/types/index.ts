@@ -13,9 +13,9 @@ export interface NodeFlags {
   proposed?: boolean
   reportingOnly?: boolean
   pending?: boolean
-  conditional?: boolean          // N6 — Decision D1; not currently installed
-  arenaStorage?: boolean         // N7 — storage zones/volume still under reconciliation
-  waterQuality?: boolean         // N8, plus N6 if Decision D1 reinstates it
+  conditional?: boolean
+  arenaStorage?: boolean         // N7 — confirmed arena storage node; exact coordinate still unverified
+  waterQuality?: boolean         // N6 and N8 monitoring/reporting nodes
   governmentAsset?: boolean      // N5 — existing government retention pond
   datumUnconfirmed?: boolean
   coordinateUnconfirmed?: boolean
@@ -29,6 +29,13 @@ export interface NodeSpec {
   caveat?: string
 }
 
+export interface NodeSiteDesign {
+  status: 'working_assumption' | 'not_applicable'
+  enclosure: string
+  power: string
+  maintenance: string
+}
+
 export interface NodePin {
   nodeId: NodeId
   label: string
@@ -37,6 +44,7 @@ export interface NodePin {
   lat: number | null   // null = PENDING (N2)
   lng: number | null
   flags: NodeFlags
+  mapStatus: 'resolved' | 'api_only'
   provenance: Provenance
   deployment: DeploymentStatus
   reading: { value: string; unit: string } | null
@@ -45,6 +53,7 @@ export interface NodePin {
   batteryPct?: number
   loraUptime?: number
   specs?: NodeSpec[]    // node-specific engineering parameters (Q_pump, footprint, etc.)
+  siteDesign: NodeSiteDesign // Revision 11 enclosure, power and maintenance-access basis
   designNote?: string   // locked design rationale / standing caveat
 }
 
@@ -100,6 +109,8 @@ export type PLCMode = 'AUTO' | 'MANUAL_LOCKOUT' | 'EMERGENCY_HOLD' | 'FAULT'
 export type GatePosition = 'OPEN' | 'CLOSED' | 'INTERMEDIATE' | 'INVALID'
 export type GateCommand = 'OPEN' | 'CLOSE' | 'HOLD' | 'NONE'
 export type TransitionState = 'CONFIRMED' | 'TRANSITIONING' | 'INTERLOCK_BLOCKED' | 'TIMEOUT' | 'JAMMED'
+export type PenstockControlState = 'CLOSED_ISOLATE' | 'ADMIT' | 'GRAVITY_RELEASE'
+export type PumpControlState = 'IDLE' | 'RUNNING' | 'PUMP_OFF' | 'FAULT'
 
 export interface ControllerTelemetry {
   controllerId: ControllerId
@@ -108,6 +119,7 @@ export interface ControllerTelemetry {
   plcClass: string
   deployment: DeploymentStatus
   mode: PLCMode
+  controlState: PenstockControlState
   command: GateCommand
   confirmedPosition: GatePosition
   transition: TransitionState
@@ -119,7 +131,42 @@ export interface ControllerTelemetry {
   motorJam: boolean
   manualLockout: boolean
   emergencyHold: boolean
-  mainsAvailable: boolean
+  l3WarningCleared: boolean
+  mainsAvailable: boolean | null
+  powerArchitecture: string
+  maintenancePlan: string
+  upsState: 'ONLINE' | 'ON_BATTERY' | 'PENDING'
+  plcHealthy: boolean
+  telemetryHealthy: boolean
+  modbusHealthy: boolean
+  lastContact: Date
+  programRevision: string
+  localLogRetention: string
+}
+
+export interface PumpControllerTelemetry {
+  controllerId: 'C2'
+  name: string
+  location: string
+  plcClass: string
+  deployment: DeploymentStatus
+  mode: PLCMode
+  state: PumpControlState
+  pumpRunning: boolean
+  wetWellLevelM: number | null
+  pumpCurrentA: number | null
+  runHours: number
+  drainRecessionConfirmed: boolean
+  dutyFlowM3h: number
+  designHeadM: number
+  headBandM: [number, number]
+  dischargeDiameterMm: number
+  drawdownHours: number
+  nonReturnProtection: boolean
+  pumpCandidate: string
+  mainsAvailable: boolean | null
+  powerArchitecture: string
+  maintenancePlan: string
   upsState: 'ONLINE' | 'ON_BATTERY' | 'PENDING'
   plcHealthy: boolean
   telemetryHealthy: boolean
@@ -158,13 +205,6 @@ export interface TideWindow {
   risk: 'low' | 'medium' | 'high'
 }
 
-export interface KPIPoint {
-  date: string
-  dhdt: number
-  threshold: number
-  couponAdj: number
-}
-
 export interface AvoidedLossEvent {
   date: string
   alertLevel: AlertLevel
@@ -198,6 +238,8 @@ export type LangCode = 'bm' | 'en' | 'zh' | 'ta'
 export interface Lang {
   nativeName: string   // language's own name, shown in the selector
   alertTitle: string
+  noPublicAlert: string
+  noPublicAction: string
   levels: Record<AlertLevel, { label: string; action: string; color: string }>
   callEmergency: string   // tap-to-call 999 button (shown at Level 3+)
   areaLevelPrefix: string // map footer: "This area: Level"

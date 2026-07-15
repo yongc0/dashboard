@@ -7,7 +7,7 @@ import { c1Telemetry } from '../../../data/controllerConfig'
 import type { SensorNode } from '../../../types'
 
 const LEVEL_COLORS = ['', '#16a34a', '#ca8a04', '#ea580c', '#dc2626']
-const LEVEL_LABELS = ['', 'WATCH', 'CAUTION', 'WARNING', 'CRITICAL']
+const LEVEL_LABELS = ['', 'MAINTENANCE', 'PRE-STORM', 'WARNING', 'EVACUATION']
 
 const CONFIDENCE_STYLE: Record<SensorNode['confidence'], string> = {
   good: 'bg-green-100 text-green-700',
@@ -20,6 +20,7 @@ const CONFIDENCE_STYLE: Record<SensorNode['confidence'], string> = {
 export default function OverviewTab() {
   const level = alertState.level
   const mode = getSystemMode()
+  const n1 = getSensor('N1')
   const n3 = getSensor('N3')
   const fusedRain = Math.max(RAINFALL_N1_MMHR, RAINFALL_N5_MMHR ?? -Infinity)
   const rainClass = classifyIntensity(fusedRain)
@@ -33,25 +34,25 @@ export default function OverviewTab() {
       pct: n3?.waterLevel && n3?.waterLevelMax ? n3.waterLevel / n3.waterLevelMax : 0,
     },
     {
-      label: 'Rain Intensity (Either Gauge)',
+      label: 'Rainfall Severity Signal (N1)',
       value: `${fusedRain} mm/hr`,
-      sub: `N1 ${RAINFALL_N1_MMHR} · N5 ${RAINFALL_N5_MMHR ?? 'PENDING'} · ${rainClass.label}`,
+      sub: `N1 ${RAINFALL_N1_MMHR} · N5 spatial cross-check ${RAINFALL_N5_MMHR ?? 'PENDING'} · ${rainClass.label}`,
       icon: <CloudRain size={20} className="text-cyan-500" />,
       pct: Math.min(1, fusedRain / 60),
     },
     {
-      label: 'Rise Rate dh/dt (N3)',
-      value: `${c1Telemetry.confirmedPosition}`,
-      sub: `${c1Telemetry.mode} · backflow interlock ${c1Telemetry.backflowInterlock ? 'ACTIVE' : 'clear'}`,
+      label: 'C1 Penstock State',
+      value: c1Telemetry.controlState.replaceAll('_', ' / '),
+      sub: `${c1Telemetry.mode} · position ${c1Telemetry.confirmedPosition} · interlock ${c1Telemetry.backflowInterlock ? 'ACTIVE' : 'clear'}`,
       icon: <Cpu size={20} className="text-blue-950" />,
       pct: c1Telemetry.plcHealthy ? 1 : 0,
     },
     {
-      label: 'Validated dh/dt (N3)',
-      value: n3?.dhdt !== undefined ? `${n3.dhdt} m/hr` : '—',
-      sub: 'Dual-sensor agreement required before fusion',
+      label: 'Drain dh/dt (N1)',
+      value: n1?.dhdt !== undefined ? `${n1.dhdt} m/hr` : '—',
+      sub: 'Numeric trigger pending Z_invert + one monsoon season',
       icon: <Activity size={20} className="text-orange-500" />,
-      pct: n3?.dhdt !== undefined ? n3.dhdt / 0.3 : 0,
+      pct: 0,
     },
   ]
 

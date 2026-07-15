@@ -13,7 +13,7 @@ const TSM_CENTER: [number, number] = [3.030, 101.527]
 const TSM_RADIUS_M = 600  // approximate affected area radius in metres
 
 interface Props {
-  level: AlertLevel
+  level: AlertLevel | null
   levelLabel: string   // already localised by the caller
   areaPrefix: string   // e.g. "This area: Level"
 }
@@ -22,7 +22,8 @@ interface Props {
 // No node diagnostics, no sensor readings, no operator detail.
 // Language-agnostic — the caller passes pre-localised strings.
 export default function PublicMap({ level, levelLabel, areaPrefix }: Props) {
-  const color = LEVEL_COLOR[level]
+  const color = level === null ? '#0f766e' : LEVEL_COLOR[level]
+  const levelText = level === null ? '—' : level
 
   return (
     <div style={{ borderRadius: 16, overflow: 'hidden', border: `2px solid ${color}30` }}>
@@ -48,14 +49,14 @@ export default function PublicMap({ level, levelLabel, areaPrefix }: Props) {
             <div style={{ textAlign: 'center', fontFamily: 'system-ui, sans-serif' }}>
               <div style={{ fontWeight: 900, fontSize: 15, color }}>{levelLabel}</div>
               <div style={{ fontSize: 11, color: '#374151', marginTop: 2 }}>
-                Taman Sri Muda · Level {level}
+                Taman Sri Muda · Level {levelText}
               </div>
             </div>
           </Popup>
         </Circle>
       </MapContainer>
       <div style={{ background: color, color: 'white', textAlign: 'center', padding: '6px 0', fontSize: 12, fontWeight: 700 }}>
-        {areaPrefix} {level} — {levelLabel}
+        {areaPrefix} {levelText} — {levelLabel}
       </div>
     </div>
   )

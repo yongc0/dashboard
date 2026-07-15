@@ -12,15 +12,14 @@ export const feedConfigs: FeedStatus[] = [
     waterLevelStationId: '3015432',
     district: 'Klang, Selangor',
     thresholds: {
-      // Provisional — read off the official hydrograph by eye (±0.1 m), DATUM UNCONFIRMED.
+      // Revision 11 retains these official station thresholds.
       normal: 2.8,
       alert: 4.4,
       warning: 4.7,
       danger: 5.0,
     },
     status: 'partial',
-    datumUnconfirmed: true,
-    note: 'JPS/DID API call only — no physical N2 project node. Station 3015432 is listed in Revision 7; its role/API mapping, official metadata and datum still require confirmation.',
+    note: 'JPS/DID API call only — no physical N2 project node. Station and official stage bands remain confirmed in Revision 11; live API/data-sharing access remains pending.',
     lastReading: null,
     crossCheckDelta: null,
   },
@@ -64,7 +63,7 @@ export const feedConfigs: FeedStatus[] = [
     district: 'Klang',
     thresholds: { normal: null, alert: null, warning: null, danger: null },
     status: 'not_configured',
-    note: 'Revision 7 F4 input for the future Level-2 automated drawdown rule. Source, thresholds and control sequence remain PENDING.',
+    note: 'Revision 11 F4 input for the intended Level-2 pre-storm drawdown rule. Source, trigger and tide-feed integration remain PENDING; operation is manual until defined.',
     lastReading: null,
   },
 ]

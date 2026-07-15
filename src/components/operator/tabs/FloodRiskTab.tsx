@@ -5,7 +5,7 @@ import {
 } from 'recharts'
 import { Clock, Lock, TrendingUp, AlertCircle, Info, Waves, FileWarning } from 'lucide-react'
 import { CURRENT_ALERT_LEVEL, forecast72hr, fusionState, tideWindows } from '../../../data/mockData'
-import { FUSION_THRESHOLDS } from '../../../data/alertFusion'
+import { DHDT_THRESHOLD_METHOD, FUSION_THRESHOLDS } from '../../../data/alertFusion'
 import { feedConfigs, DID_INTENSITY } from '../../../data/feedConfigs'
 import { nodeConfig } from '../../../data/nodeConfig'
 
@@ -43,12 +43,12 @@ function BorrowedFeedsPanel() {
             <span className="text-sm font-semibold text-gray-700">{didRiver.name}</span>
             <div className="flex items-center gap-2">
               <ProvenanceTag src="DID" />
-              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">⚠ DATUM UNCONFIRMED</span>
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700">OFFICIAL STAGE BANDS</span>
               <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">PARTIAL</span>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2 text-xs text-gray-500 mt-2">
-            <div>Water-level reference: <span className="font-bold text-gray-700">{didRiver.stationId}</span> <span className="text-orange-600">(role/API mapping pending)</span></div>
+            <div>Water-level station: <span className="font-bold text-gray-700">{didRiver.stationId}</span></div>
             <div>District: {didRiver.district}</div>
             <div>Normal: <span className="font-bold text-gray-700">{didRiver.thresholds.normal} m</span></div>
             <div>Alert: <span className="font-bold text-gray-700">{didRiver.thresholds.alert} m</span></div>
@@ -57,7 +57,7 @@ function BorrowedFeedsPanel() {
           </div>
           <div className="flex items-start gap-2 mt-2 p-2 rounded bg-orange-50 border border-orange-200 text-xs text-orange-700">
             <AlertCircle size={11} className="flex-shrink-0 mt-0.5" />
-            <span>N2 is a JPS/DID API call and is not mapped as a physical node. Thresholds and datum remain provisional pending official metadata.</span>
+            <span>N2 is a JPS/DID API call and is not mapped as a physical node. Live API/data-sharing access remains pending, and N2 is excluded from the L4 quorum.</span>
           </div>
         </div>
 
@@ -75,7 +75,7 @@ function BorrowedFeedsPanel() {
           </div>
           <div className="flex items-center gap-2 mt-2 p-2 rounded bg-gray-100 border border-gray-200 text-xs">
             <AlertCircle size={11} className="text-gray-400" />
-            <span className="text-gray-500">Live API telemetry is not yet wired. Onsite alert fusion uses the Revision 7 either-gauge rule: N1 or N5.</span>
+            <span className="text-gray-500">Live API telemetry is not yet wired. Revision 11 retains N1 as the L4 rainfall signal; N5 provides spatial cross-check coverage.</span>
           </div>
           {/* DID official rainfall-intensity categories */}
           <div className="mt-2 flex flex-wrap gap-1.5">
@@ -110,18 +110,18 @@ function BorrowedFeedsPanel() {
   )
 }
 
-// Revision 7 reopens N7's area, coordinate, storage zones and volume.
+// Revision 11 retains the arena storage basis and resolves its dashboard map position.
 function ArenaPanel() {
   const n7 = nodeConfig.find(n => n.nodeId === 'N7')!
   return (
     <div className="bg-white border border-sky-100 rounded-xl p-5 shadow-sm">
       <div className="flex items-center gap-2 mb-1">
         <Waves size={16} className="text-sky-500" />
-        <h3 className="font-semibold text-gray-700">N7 — Sunken Arena · Storage Reconciliation</h3>
-        <span className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">DECISION D4</span>
+        <h3 className="font-semibold text-gray-700">N7 — Sunken Arena · Confirmed Storage Basis</h3>
+        <span className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700">BASIS LOCKED</span>
       </div>
       <p className="text-xs text-gray-400 mb-4">
-        The dimensioned plan confirms the Jalan Srikandi site identity but not its GPS coordinate. It also shows that the arena is not one uniform storage surface.
+        Revision 11 retains the 17,280 m² footprint, three storage zones, 43,200 m³ gross storage and ≈37,300 m³ net usable SLB basis. The dashboard map position is resolved; exact construction setting-out remains an engineering task.
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {n7.specs?.map((s, i) => (
@@ -134,19 +134,23 @@ function ArenaPanel() {
       </div>
       <div className="mt-3 flex items-start gap-2 p-2 rounded bg-sky-50 border border-sky-200 text-xs text-sky-800">
         <Info size={11} className="flex-shrink-0 mt-0.5" />
-        <span><strong>No authoritative storage volume, freeboard or time-to-fill is shown.</strong> The 15,000 m² plan value is a fourth unreconciled area figure, and zone inundation suitability remains undecided.</span>
+        <span><strong>Coordinate caveat retained.</strong> The Jalan Srikandi site identity is corroborated, but the exact N7 coordinate still requires verification against the site plan.</span>
       </div>
     </div>
   )
 }
 
-// Bucket A — field data that gates the storage/SLB model. LUAS/DID request not yet sent.
+// Revision 11 consolidated pending / blocker ledger.
 const BUCKET_A = [
-  { item: 'Catchment area', note: 'Draining to TSM outfall. ~3× original footprint qualitatively (Zone D RA / FMT 2022) — NOT a usable km² figure.' },
-  { item: 'Z_invert', note: 'Surveyed outfall invert at N3. Two unsourced candidates discarded. LUAS/DID survey or as-built drawings required.' },
-  { item: 'Rainfall hyetograph', note: 'Temporal distribution of the 100-ARI design storm.' },
-  { item: 'N7 Decision D4', note: 'Verify coordinate, storage zones, authoritative area/volume and sensor placement.' },
+  { item: 'N2 DID API access', note: 'Confirm live API/data-sharing access with LUAS/DID.' },
   { item: 'N4 pipe survey', note: 'Pipe diameter and material block selection of the clamp-on ultrasonic flow-anomaly sensor.' },
+  { item: 'dh/dt thresholds', note: 'Survey Z_invert at N1 and N5/N7, then collect one full monsoon season of rise-rate data.' },
+  { item: 'L2 pre-storm trigger', note: 'Define the tide-forecast trigger and integrate feed F4; operator-initiated until then.' },
+  { item: 'H_geo / LUAS-DID records', note: 'Required for pump duty and the SLB storage balance.' },
+  { item: 'N7 exact coordinate', note: 'Verify sensor setting-out against the site plan.' },
+  { item: 'Amacan P 600-350 curve sheet', note: 'Required before final pump, motor and propeller selection.' },
+  { item: 'C1/C2 mains tie-in', note: 'Verify grid access at the penstock structure and wet well; C2 requires mains or genset for pump duty.' },
+  { item: 'N3/N4 mains tie-in', note: 'Check outfall supply and obtain DID permission for any N4 pump-station tie-in.' },
 ]
 
 function BucketAPanel() {
@@ -154,11 +158,11 @@ function BucketAPanel() {
     <div className="bg-white border border-red-100 rounded-xl p-5 shadow-sm">
       <div className="flex items-center gap-2 mb-1">
         <FileWarning size={16} className="text-red-500" />
-        <h3 className="font-semibold text-gray-700">Bucket A — Pending Field Data (gates the storage / SLB model)</h3>
-        <span className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">LUAS/DID REQUEST NOT SENT</span>
+        <h3 className="font-semibold text-gray-700">Revision 11 Pending / Blocker Ledger</h3>
+        <span className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">9 OPEN ITEMS</span>
       </div>
       <p className="text-xs text-gray-400 mb-3">
-        These are NOT known values — no chart, placeholder, or projection below treats them as resolved. One combined LUAS/DID request covers all four and is the single highest-priority action item.
+        These inputs remain visibly pending. The dashboard does not substitute desk estimates for field surveys, a monsoon record, API access or a vendor curve.
       </p>
       <div className="space-y-2">
         {BUCKET_A.map(b => (
@@ -175,20 +179,38 @@ function BucketAPanel() {
   )
 }
 
+function DhdtMethodPanel() {
+  return (
+    <div className="bg-white border border-orange-100 rounded-xl p-5 shadow-sm">
+      <div className="flex items-center gap-2 mb-1">
+        <TrendingUp size={16} className="text-orange-500" />
+        <h3 className="font-semibold text-gray-700">dh/dt Threshold Calibration Method</h3>
+        <span className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">METHOD LOCKED · VALUE PENDING</span>
+      </div>
+      <p className="text-xs text-gray-500 mb-3">Revision 11 retains the evidence path, but not a numeric drain or basin rise-rate threshold.</p>
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
+        {DHDT_THRESHOLD_METHOD.map((step, index) => (
+          <div key={step} className="rounded-lg border border-gray-100 bg-gray-50 p-3"><div className="text-xs font-black text-orange-600">STEP {index + 1}</div><div className="text-xs text-gray-600 mt-1 leading-relaxed">{step}</div></div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 const RISK_COLORS = { low: '#22c55e', medium: '#eab308', high: '#ef4444' }
 
 const RISK_GUIDE = [
-  { level: 1, label: 'Watch', color: 'bg-green-500', action: 'Monitor alerts. No action required.' },
-  { level: 2, label: 'Caution', color: 'bg-yellow-500', action: 'Move valuables. Prepare emergency kit.' },
-  { level: 3, label: 'Warning', color: 'bg-orange-500', action: 'Initiate evacuation. Coordinate with RT/RW.' },
-  { level: 4, label: 'Critical', color: 'bg-red-600', action: 'Full evacuation. Activate pumps. Call NADMA.' },
+  { level: 1, label: 'Maintenance', color: 'bg-green-600', action: 'Operator-only condition and maintenance channel. Never public-facing.' },
+  { level: 2, label: 'Pre-storm', color: 'bg-yellow-500', action: 'Draw down against the tide forecast; operator-initiated until F4 is defined.' },
+  { level: 3, label: 'Warning', color: 'bg-orange-500', action: 'Mandatory hardwired sirens and emergency-hold sequence before ADMIT.' },
+  { level: 4, label: 'Evacuation', color: 'bg-red-600', action: 'Automatic 3-of-4 severity quorum; community chain executes evacuation.' },
 ]
 
 const RISK_UI = {
-  1: { label: 'WATCH', panel: 'bg-green-50 border-green-200', title: 'text-green-700', note: 'text-green-600', dot: 'bg-green-400' },
-  2: { label: 'CAUTION', panel: 'bg-yellow-50 border-yellow-200', title: 'text-yellow-700', note: 'text-yellow-600', dot: 'bg-yellow-400' },
+  1: { label: 'MAINTENANCE', panel: 'bg-green-50 border-green-200', title: 'text-green-700', note: 'text-green-600', dot: 'bg-green-400' },
+  2: { label: 'PRE-STORM', panel: 'bg-yellow-50 border-yellow-200', title: 'text-yellow-700', note: 'text-yellow-600', dot: 'bg-yellow-400' },
   3: { label: 'WARNING', panel: 'bg-orange-50 border-orange-200', title: 'text-orange-700', note: 'text-orange-600', dot: 'bg-orange-400' },
-  4: { label: 'CRITICAL', panel: 'bg-red-50 border-red-200', title: 'text-red-700', note: 'text-red-600', dot: 'bg-red-500' },
+  4: { label: 'EVACUATION', panel: 'bg-red-50 border-red-200', title: 'text-red-700', note: 'text-red-600', dot: 'bg-red-500' },
 }
 
 // Thin out forecast to ~every 3hrs for chart clarity
@@ -196,7 +218,7 @@ const chartData = forecast72hr.filter((_, i) => i % 3 === 0).slice(0, 25)
 
 export default function FloodRiskTab() {
   const now = new Date()
-  const zInvert = FUSION_THRESHOLDS.zinvert_m
+  const zInvert = FUSION_THRESHOLDS.zinvertM
   const configuredSignals = fusionState.signals.filter(s => !s.pending)
   const activeConfigured = configuredSignals.filter(s => s.active).length
   const currentPoint = forecast72hr[0]
@@ -343,6 +365,9 @@ export default function FloodRiskTab() {
 
       {/* Borrowed feeds — provenance behind the chart above */}
       <BorrowedFeedsPanel />
+
+      {/* Revision 11 retains the method while keeping numeric thresholds pending. */}
+      <DhdtMethodPanel />
 
       {/* N7 arena storage reconciliation */}
       <ArenaPanel />

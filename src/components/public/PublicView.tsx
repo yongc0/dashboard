@@ -53,12 +53,15 @@ export default function PublicView() {
   const [copied, setCopied] = useState(false)
 
   const t = strings[lang]
-  const level = alertState.level
-  const levelInfo = t.levels[level]
-  const color = LEVEL_COLORS[level]
+  const operatorLevel = alertState.level
+  const level: AlertLevel | null = operatorLevel === 1 ? null : operatorLevel
+  const levelInfo = level === null
+    ? { label: t.noPublicAlert, action: t.noPublicAction, color: 'bg-teal-700' }
+    : t.levels[level]
+  const color = level === null ? '#0f766e' : LEVEL_COLORS[level]
   const tidalNode = sensors.find(s => s.nodeId === 'N3')
   const rainfallSignal = fusionState.signals.find(s => s.id === 'rainfall')
-  const riseSignal = fusionState.signals.find(s => s.id === 'dhdt')
+  const riseSignal = fusionState.signals.find(s => s.id === 'drain_dhdt')
   const publicReadings = [
     { label: t.sensorLabels.riverStage, value: t.sensorLabels.pending, icon: '🌊' },
     { label: t.sensorLabels.rainfallNow, value: rainfallSignal?.value ?? t.sensorLabels.pending, icon: '🌧️' },
@@ -144,7 +147,7 @@ export default function PublicView() {
       <div className="flex-1 flex flex-col items-center justify-center px-4 py-6 text-center">
         {/* Pulse ring + level badge */}
         <div className="relative mb-6">
-          {level >= 3 && (
+          {operatorLevel >= 3 && (
             <>
               <div className="absolute inset-0 rounded-full bg-white/20 pulse-ring scale-125" />
               <div className="absolute inset-0 rounded-full bg-white/10 pulse-ring scale-150" style={{ animationDelay: '0.5s' }} />
@@ -152,7 +155,7 @@ export default function PublicView() {
           )}
           <div className="relative flex items-center justify-center w-36 h-36 rounded-full bg-white/20 border-4 border-white shadow-2xl">
             <div className="text-center">
-              <div className="text-5xl font-black text-white leading-none">{level}</div>
+              <div className="text-5xl font-black text-white leading-none">{level ?? '—'}</div>
               <div className="text-white/90 text-xs font-bold mt-1">TAHAP / LEVEL</div>
             </div>
           </div>
@@ -174,21 +177,21 @@ export default function PublicView() {
         <div className="w-full max-w-md bg-black/20 rounded-2xl p-4 mb-4 border border-white/20">
           <div className="text-white/70 text-xs font-bold uppercase tracking-widest mb-1">{t.timeRemaining}</div>
           <div className="text-white text-3xl font-black">
-            {level >= 3 ? t.timeActionNow : t.timeEstimatePending}
+            {operatorLevel >= 3 ? t.timeActionNow : t.timeEstimatePending}
           </div>
           <div className="text-white/60 text-xs mt-1">{t.timeEstimatePendingDetail}</div>
-          <div className="grid grid-cols-4 gap-1 mt-3">
-            {([1, 2, 3, 4] as AlertLevel[]).map(step => (
-              <div key={step} className={`h-2 rounded-full ${step <= level ? 'bg-white' : 'bg-white/20'}`} />
+          <div className="grid grid-cols-3 gap-1 mt-3">
+            {([2, 3, 4] as AlertLevel[]).map(step => (
+              <div key={step} className={`h-2 rounded-full ${level !== null && step <= level ? 'bg-white' : 'bg-white/20'}`} />
             ))}
           </div>
         </div>
 
-        {/* Four-level warning legend — labels follow the selected language */}
+        {/* Public ladder starts at L2. L1 is the operator-only maintenance channel. */}
         <div className="w-full max-w-md bg-white rounded-2xl p-3 mb-4 shadow-lg text-left">
           <div className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-2">{t.levelLegend}</div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {([1, 2, 3, 4] as AlertLevel[]).map(legendLevel => {
+          <div className="grid grid-cols-3 gap-2">
+            {([2, 3, 4] as AlertLevel[]).map(legendLevel => {
               const active = legendLevel === level
               const info = t.levels[legendLevel]
               return (
@@ -224,7 +227,7 @@ export default function PublicView() {
         {/* CTA buttons */}
         <div className="w-full max-w-md flex flex-col gap-3">
           {/* Tap-to-call emergency — surfaced only when action is urgent (Level 3+) */}
-          {level >= 3 && (
+          {operatorLevel >= 3 && (
             <a href="tel:999"
               className="flex items-center justify-center gap-2 w-full py-4 bg-red-700 text-white rounded-2xl font-black text-lg shadow-lg active:scale-95 transition-transform ring-2 ring-white/50">
               <Phone size={20} />
@@ -254,7 +257,7 @@ export default function PublicView() {
               <Map size={18} />
               {t.areaMap}
             </button>
-            {level >= 3 && (
+            {operatorLevel >= 3 && (
               <button onClick={() => setChainModal(true)}
                 className="flex-1 flex items-center justify-center gap-2 py-3 bg-white/20 text-white rounded-2xl font-semibold border border-white/30 active:scale-95 transition-transform">
                 <Users size={18} />

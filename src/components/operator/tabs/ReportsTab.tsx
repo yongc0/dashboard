@@ -23,7 +23,7 @@ const REPORTS = [
   {
     icon: <Shield size={20} className="text-purple-500" />,
     title: 'Infrastructure Reliability Report',
-    desc: 'Asset uptime, maintenance log, sensor calibration records, LoRa network performance.',
+    desc: 'Asset uptime, v11 enclosure/power/access basis, maintenance log, calibration records and LoRa performance.',
     period: 'Q2 2026',
     format: 'PDF',
     ready: true,
@@ -31,7 +31,7 @@ const REPORTS = [
   {
     icon: <FileCheck size={20} className="text-teal-500" />,
     title: 'Green Bond Compliance Report',
-    desc: 'One-click: dh/dt KPI vs covenant, NEM credits, avoided-loss ledger. Adaptation Fund format.',
+    desc: 'dh/dt calibration evidence, data availability, N7 storage basis, NEM credits and avoided-loss ledger.',
     period: 'H1 2026',
     format: 'PDF + XLSX',
     ready: true,
@@ -73,9 +73,11 @@ export default function ReportsTab() {
       hash: event.id,
       event: `${event.controllerId} ${event.type} source=${event.source} acknowledged=${event.acknowledged} message=${event.message}`,
     })),
-    { ts: '2026-06-29T10:14:33Z', hash: 'a3f9...c12e', event: 'ALERT_L3_TRIGGERED signals=[n3_validated_dhdt,rainfall_either_gauge]' },
-    { ts: '2026-06-29T10:09:21Z', hash: '7b2d...88fa', event: 'N3_SENSOR_PAIR radar=3.10m pressure=3.08m delta=0.02m validity=accepted' },
-    { ts: '2026-06-29T09:30:12Z', hash: 'f56a...9911', event: 'N6_DECISION_GAP deployment=conditional decision=D1 live_evidence=false' },
+    { ts: '2026-06-29T10:14:33Z', hash: 'a3f9...c12e', event: 'L3_WARNING_SEQUENCE_ACTIVE source=hardwired_occupancy_safeguard before_state=ADMIT' },
+    { ts: '2026-06-29T10:09:21Z', hash: '7b2d...88fa', event: 'L4_QUORUM_STATE active=1/4 required=3 excluded=[N2,N4]' },
+    { ts: '2026-06-29T09:30:12Z', hash: 'f56a...9911', event: 'N6_REINSTATED channels=[NH3-N,TSS] bod5=false role=monitoring_only' },
+    { ts: '2026-07-15T14:12:00Z', hash: 'r11a...0011', event: 'MAP_STATUS physical_nodes=7 resolved=7 api_only=[N2]' },
+    { ts: '2026-07-15T14:11:00Z', hash: 'r11p...0010', event: 'POWER_BASIS C1=mains_plus_72h_UPS_recommended C2=mains_or_genset_required tie_ins=open' },
   ]
 
   return (

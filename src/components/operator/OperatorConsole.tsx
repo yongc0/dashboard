@@ -24,7 +24,7 @@ const TABS = [
 ]
 
 const LEVEL_COLORS = ['', 'bg-green-600', 'bg-yellow-500', 'bg-orange-500', 'bg-red-600']
-const LEVEL_LABELS = ['', 'WATCH', 'CAUTION', 'WARNING', 'CRITICAL']
+const LEVEL_LABELS = ['', 'MAINTENANCE', 'PRE-STORM', 'WARNING', 'EVACUATION']
 
 interface Props {
   onSwitchToPublic: () => void
